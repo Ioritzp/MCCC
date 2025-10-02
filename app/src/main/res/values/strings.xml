@@ -1,3 +1,4 @@
 <resources>
     <string name="app_name">Marvel Champions Campaign Companion</string>
+    <string name="title_activity_campaign_instance_detail">CampaignInstanceDetail</string>
 </resources>
