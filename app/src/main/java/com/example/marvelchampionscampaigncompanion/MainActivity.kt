@@ -7,6 +7,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -27,6 +28,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -49,14 +51,12 @@ class BetterMainActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     onLoginClick = { ->
                         Toast.makeText(this, "Going to main menu", Toast.LENGTH_SHORT).show()
-                        val intent = Intent(this, BetterMainMenu::class.java)
+                        val intent = Intent(this, SelectCampaign::class.java)
                         startActivity(intent)
 
                     })
             }
         }
-
-
     }
 
     @Composable
@@ -66,6 +66,9 @@ class BetterMainActivity : ComponentActivity() {
     ) {
         var emailInput by remember { mutableStateOf(TextFieldValue("")) }
         var passwordInput by remember { mutableStateOf(TextFieldValue("")) }
+        // Get the current context to use for starting a new activity
+        val context = LocalContext.current
+
         Column(
             modifier = modifier
                 .fillMaxSize()
@@ -85,11 +88,9 @@ class BetterMainActivity : ComponentActivity() {
 
             Column(
                 modifier = Modifier
-                    .fillMaxWidth(0.8f)
-                //.weight(1f)
-                ,
+                    .fillMaxWidth(0.8f),
                 horizontalAlignment = Alignment.CenterHorizontally,
-                //verticalArrangement = Arrangement.Center
+                verticalArrangement = Arrangement.Center
             ) {
                 OutlinedTextField(
                     value = emailInput,
@@ -98,6 +99,8 @@ class BetterMainActivity : ComponentActivity() {
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
                 )
+
+                Spacer(modifier = Modifier.height(8.dp))
 
                 OutlinedTextField(
                     value = passwordInput,
@@ -113,9 +116,7 @@ class BetterMainActivity : ComponentActivity() {
                     modifier = Modifier
                         .fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically,
-
-
-                    ) {
+                ) {
 
                     Button(
                         onClick = { onLoginClick() },
@@ -135,8 +136,23 @@ class BetterMainActivity : ComponentActivity() {
                         Text("Register")
                     }
                 }
-            }
 
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // --- NEW ADMIN BUTTON ---
+                Button(
+                    onClick = {
+                        // Navigate to DBManager Activity
+                        val intent = Intent(context, DataAdminActivity()::class.java)
+                        context.startActivity(intent)
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(50.dp)
+                ) {
+                    Text("Admin")
+                }
+            }
         }
     }
 

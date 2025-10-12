@@ -2,6 +2,7 @@ package com.example.marvelchampionscampaigncompanion
 
 
 import android.content.Intent
+import android.graphics.Paint
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -30,11 +31,10 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.mutableStateListOf
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.geometry.isEmpty
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
@@ -85,13 +85,13 @@ fun SelectCampaignMenu(campaignInstance: CampaingBlueprint, onClick: () -> Unit,
                     contentScale = ContentScale.Crop
                 )
             } ?: Box(
-                        modifier = Modifier
-                            .size(80.dp)
-                            .background(
-                                MaterialTheme.colorScheme.surfaceVariant,
-                                MaterialTheme.shapes.medium
-                            )
+                modifier = Modifier
+                    .size(80.dp)
+                    .background(
+                        MaterialTheme.colorScheme.surfaceVariant,
+                        MaterialTheme.shapes.medium
                     )
+            )
 
             Spacer(modifier = Modifier.width(12.dp))
 
@@ -107,16 +107,16 @@ fun SelectCampaignMenu(campaignInstance: CampaingBlueprint, onClick: () -> Unit,
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
-            //detalles a añadir, opcional
+                //detalles a añadir, opcional
             }
 
 
-            }
+        }
 
-
-            }
 
     }
+
+}
 
 
 
@@ -126,25 +126,25 @@ fun SelectCampaignMenu(campaignInstance: CampaingBlueprint, onClick: () -> Unit,
 fun SelectCampaignScreen(modifier: Modifier = Modifier) {
     val campaignInstances = remember {
         mutableStateListOf<CampaingBlueprint>(
-        CampaingBlueprint(
-            "inst_001",
-            "id_Campaign1",
-            "Rise of Red Skull",
-            "Standard",
-            R.drawable.ic_launcher_background
-        ),
-        CampaingBlueprint(
-            "inst_002",
-            "id_Campaign2",
-            "Most Wanted",
-            "Expert",
-            R.drawable.ic_launcher_background
-        ),
-        CampaingBlueprint("inst_003",
-            "id_Campaign3",
-            "Mad Titan",
-            "Standard"
-        )
+            CampaingBlueprint(
+                "inst_001",
+                "id_Campaign1",
+                "Rise of Red Skull",
+                "Standard",
+                R.drawable.ic_launcher_background
+            ),
+            CampaingBlueprint(
+                "inst_002",
+                "id_Campaign1",
+                "Rise of Red Skull",
+                "Expert",
+                R.drawable.ic_launcher_background
+            ),
+            CampaingBlueprint("inst_003",
+                "id_Campaign3",
+                "Mad Titan",
+                "Standard"
+            )
         )
     }
 
@@ -152,38 +152,45 @@ fun SelectCampaignScreen(modifier: Modifier = Modifier) {
 
     Scaffold(
         modifier = modifier.fillMaxSize(),
+        // Set background color for the main content area
+        containerColor = Color(0xFFE8F5E9), // Light Green
         topBar = {
             TopAppBar(
-                title = { Text("select campaign instance") },
+                title = {
+                    Box(
+                        modifier = Modifier.fillMaxWidth(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        // Use a simple Text composable. The TopAppBar will center it by default.
+                        Text("Campaign menu")
+                    }
+                },
+                // Let the TopAppBar determine its own size, but we can customize colors.
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.primaryContainer,
-                    titleContentColor = MaterialTheme.colorScheme.primaryContainer
+                    // Set TopAppBar background color
+                    containerColor = Color(0xFFFFF9C4), // Light Yellow
+                    // Set title color
+                    titleContentColor = Color.Black
                 )
             )
         },
         floatingActionButton = {
-            FloatingActionButton(onClick = {
-                // --- Logic to "create" a new campaign instance ---
-                // This is where you'd typically open a new screen/dialog to select a blueprint
-                // and configure the new instance. For this example, we'll add a dummy one.
-                val newId = "inst_${System.currentTimeMillis()}"
-                val blueprint = "bp_newA"
-                val newName = "Newly Created Campaign"
-                val newDifficulty = "Standard II"
-                val newImage =  R.drawable.ic_launcher_background
-
-
-                campaignInstances.add(
-                    CampaingBlueprint(
-                        id = newId,
-                        blueprintId = blueprint,
-                        name = newName,
-                        difficulty = newDifficulty,
-                        minatureImageRes = newImage
+            // Wrap FAB in a Box to control its size
+            Box(modifier = Modifier.size(72.dp)) {
+                FloatingActionButton(
+                    onClick = {
+                        context.startActivity(Intent(context, NewCampaignCreation::class.java))
+                    },
+                    // Fill the parent Box
+                    modifier = Modifier.fillMaxSize()
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.Add,
+                        contentDescription = "Create New Campaign Instance",
+                        // Make the icon inside the FAB larger
+                        modifier = Modifier.size(36.dp)
                     )
-                )
-            }) {
-                Icon(Icons.Filled.Add, contentDescription = "Create New Campaign Instance")
+                }
             }
         }
     ) { innerPadding ->
@@ -219,9 +226,7 @@ fun SelectCampaignScreen(modifier: Modifier = Modifier) {
                             onClick = {
 
                                 val intent = Intent(
-                                    context,
-                                    CampaignInstanceDetail::class.java
-                                ).apply {
+                                    context, CampaignInstanceDetail::class.java).apply {
                                     putExtra("CAMPAIGN_INSTANCE_ID", campaignInstance.id)
                                     putExtra("CAMPAIGN_INSTANCE_NAME", campaignInstance.name)
                                     // You can pass the whole object if it's Parcelable, or individual fields
