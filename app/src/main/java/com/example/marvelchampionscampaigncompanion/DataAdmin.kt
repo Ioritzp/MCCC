@@ -219,7 +219,7 @@ fun DataAdministration() {
             }
 
             item{
-                Row( horizontalArrangement = Arrangement.Center) {
+                Row( horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Button(onClick = {
                         scope.launch(Dispatchers.IO) {
                             val users = dbManager.readUsers()
@@ -233,6 +233,20 @@ fun DataAdministration() {
                     }
 
                     ) { Text("Check Users")}
+
+                    Button(onClick = {
+                        scope.launch(Dispatchers.IO) {
+                            val users = dbManager.readUsers()
+                            withContext(Dispatchers.Main) {
+                                usersList = users
+                                showUsersDialog = true
+                            }
+
+                        }
+
+                    }
+
+                    ) { Text("Check user campaigns ")}
                 }
             }
         }
