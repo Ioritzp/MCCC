@@ -1,5 +1,7 @@
 package com.example.marvelchampionscampaigncompanion
 
+import DataBaseManager
+import Utils.Verifications
 import android.content.Intent
 import android.os.Bundle
 import android.widget.Toast
@@ -47,14 +49,8 @@ class BetterMainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             MarvelChampionsCampaignCompanionTheme {
-                LoginMenuCenteredInputScreen(
-                    modifier = Modifier.fillMaxSize(),
-                    onLoginClick = { ->
-                        Toast.makeText(this, "Going to main menu", Toast.LENGTH_SHORT).show()
-                        val intent = Intent(this, SelectCampaign::class.java)
-                        startActivity(intent)
+                LoginMenuCenteredInputScreen(modifier = Modifier.fillMaxSize())
 
-                    })
             }
         }
     }
@@ -62,7 +58,6 @@ class BetterMainActivity : ComponentActivity() {
     @Composable
     fun LoginMenuCenteredInputScreen(
         modifier: Modifier = Modifier,
-        onLoginClick: () -> Unit
     ) {
         var emailInput by remember { mutableStateOf(TextFieldValue("")) }
         var passwordInput by remember { mutableStateOf(TextFieldValue("")) }
@@ -119,7 +114,17 @@ class BetterMainActivity : ComponentActivity() {
                 ) {
 
                     Button(
-                        onClick = { onLoginClick() },
+                        onClick = {
+                            val correctLogin = checkLogin(emailInput.text, passwordInput.text)
+
+                            if(correctLogin){
+                                val intent = Intent(context, SelectCampaign()::class.java)
+                                context.startActivity(intent)
+
+                            } else{
+                                Toast.makeText(context, "Incorrect login", Toast.LENGTH_SHORT).show()
+                            }
+                        },
                         modifier = Modifier
                             .weight(1f)
                             .height(50.dp)
@@ -128,7 +133,11 @@ class BetterMainActivity : ComponentActivity() {
                     }
                     Spacer(modifier = Modifier.width(16.dp))
                     Button(
-                        onClick = { },
+                        onClick = {
+                            val intent = Intent(context, RegisterActivity()::class.java)
+                            context.startActivity(intent)
+
+                        },
                         modifier = Modifier
                             .weight(1f)
                             .height(50.dp)
@@ -139,10 +148,9 @@ class BetterMainActivity : ComponentActivity() {
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // --- NEW ADMIN BUTTON ---
                 Button(
                     onClick = {
-                        // Navigate to DBManager Activity
+                        // Navigate to DBManager Activity -- TODO: THIS BUTTON MUST BE HIDDEN FOR ADMIN ACCOUNT ONLY IN FINAL VERSION
                         val intent = Intent(context, DataAdminActivity()::class.java)
                         context.startActivity(intent)
                     },
@@ -156,12 +164,29 @@ class BetterMainActivity : ComponentActivity() {
         }
     }
 
+    fun checkLogin(email: String, password: String): Boolean {
+        //TODO:according to gemini, ghis can be simplified with the "find" method. Try both and comment the least efficient.
+       var db = DataBaseManager(this)
+        var isRegistered = false
+        var checkedPassword = false
+        val users = db.readUsers()
+        for (user in users){
+            checkedPassword = Verifications.checkPassword(password, user.password)
+            if (user.email == email && checkedPassword){
+                isRegistered = true
+                break
+
+            }
+        }
+         return isRegistered
+    }
+
 
     @Preview(showBackground = true, showSystemUi = true)
     @Composable
     fun LoginMenuCenteredInputScreenPreview() {
         MarvelChampionsCampaignCompanionTheme {
-            LoginMenuCenteredInputScreen(modifier = Modifier.fillMaxSize(), onLoginClick = {})
+            LoginMenuCenteredInputScreen(modifier = Modifier.fillMaxSize())
         }
     }
 }
