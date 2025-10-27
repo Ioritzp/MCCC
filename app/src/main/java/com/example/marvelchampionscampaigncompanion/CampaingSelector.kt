@@ -1,8 +1,9 @@
 package com.example.marvelchampionscampaigncompanion
 
 
+import Classes.InstanceCampaign
+import DataBaseManager
 import android.content.Intent
-import android.graphics.Paint
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -12,8 +13,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.runtime.Composable
@@ -30,7 +29,6 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
-import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.draw.clip
@@ -59,7 +57,7 @@ class SelectCampaign : ComponentActivity(){
 
 }
 
-//genera el scroll de selector
+//The SelectCampaignMenu is no longer used in this simplified view, but can be kept for future use
 @Composable
 fun SelectCampaignMenu(campaignInstance: CampaingBlueprint, onClick: () -> Unit, modifier: Modifier = Modifier) {
 
@@ -124,31 +122,10 @@ fun SelectCampaignMenu(campaignInstance: CampaingBlueprint, onClick: () -> Unit,
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SelectCampaignScreen(modifier: Modifier = Modifier) {
-    val campaignInstances = remember {
-        mutableStateListOf<CampaingBlueprint>(
-            CampaingBlueprint(
-                "inst_001",
-                "id_Campaign1",
-                "Rise of Red Skull",
-                "Standard",
-                R.drawable.ic_launcher_background
-            ),
-            CampaingBlueprint(
-                "inst_002",
-                "id_Campaign1",
-                "Rise of Red Skull",
-                "Expert",
-                R.drawable.ic_launcher_background
-            ),
-            CampaingBlueprint("inst_003",
-                "id_Campaign3",
-                "Mad Titan",
-                "Standard"
-            )
-        )
-    }
-
     val context = LocalContext.current
+    val dbManager = remember { DataBaseManager(context) }
+    val availableCampaigns = remember { dbManager.getAllPresetCampaigns() }
+
 
     Scaffold(
         modifier = modifier.fillMaxSize(),
@@ -194,58 +171,22 @@ fun SelectCampaignScreen(modifier: Modifier = Modifier) {
             }
         }
     ) { innerPadding ->
-        Column(
+        // The main content area now always shows the "empty" state text.
+        Box(
             modifier = Modifier
                 .padding(innerPadding)
                 .fillMaxSize()
+                .padding(16.dp),
+            contentAlignment = Alignment.Center
         ) {
-            if (campaignInstances.isEmpty()) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(16.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = "No campaigns yet.\nTap the '+' button to create one!",
-                        style = MaterialTheme.typography.headlineSmall,
-                        textAlign = TextAlign.Center
-                    )
-                }
-            } else {
-                LazyColumn(
-                    modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(vertical = 8.dp) // Padding for the list itself
-                ) {
-                    items(
-                        items = campaignInstances,
-                        key = { instance -> instance.id } // Stable and unique key
-                    ) { campaignInstance ->
-                        SelectCampaignMenu(
-                            campaignInstance = campaignInstance,
-                            onClick = {
-
-                                val intent = Intent(
-                                    context, CampaignInstanceDetail::class.java).apply {
-                                    putExtra("CAMPAIGN_INSTANCE_ID", campaignInstance.id)
-                                    putExtra("CAMPAIGN_INSTANCE_NAME", campaignInstance.name)
-                                    // You can pass the whole object if it's Parcelable, or individual fields
-                                }
-                                context.startActivity(intent)
-
-                            }
-                        )
-                    }
-                }
-
-            }
+            Text(
+                text = "No campaigns yet.\nTap the '+' button to create one!",
+                style = MaterialTheme.typography.headlineSmall,
+                textAlign = TextAlign.Center
+            )
         }
     }
 }
-
-
-
-
 
 
 
