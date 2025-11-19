@@ -7,13 +7,16 @@ import Classes.InstanceHero
 import Classes.InstanceMarvelQuestion
 import Classes.InstanceScenario
 import Classes.MarvelQuestion
+import Classes.QuestionType
 import Classes.Scenario
 import DataBaseManager
-import android.content.Context
+import android.app.Activity
 import android.os.Build
 import android.os.Bundle
+import android.util.Log
 import android.widget.Toast
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.LocalActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.annotation.DrawableRes
@@ -76,6 +79,7 @@ fun NewCampaignCreationScreen(
     modifier: Modifier = Modifier) {
     val context = LocalContext.current
     val dbManager = remember { DataBaseManager(context) }
+    val activity = LocalActivity.current
 
 
     // State management for dialogs
@@ -134,7 +138,7 @@ fun NewCampaignCreationScreen(
 
 
                 createInstancedCampaign(
-                    context,
+                    activity = activity,
                     selectedCampaignId!!,
                     numberOfPlayers,
                     difficulty,
@@ -438,82 +442,103 @@ fun DifficultyDialog(onDismiss: () -> Unit, onConfirm: (String) -> Unit) {
 }
 
 @RequiresApi(Build.VERSION_CODES.O)
-fun createInstancedCampaign(context: Context, presetCampaignId: Int, playerCount: Int, difficulty: String, heroes: List<Hero>, selectedCampaignInfo: Campaign?) {
+fun createInstancedCampaign(
+    activity: Activity?,
+    presetCampaignId: Int,
+    playerCount: Int,
+    difficulty: String,
+    heroes: List<Hero>,
+    selectedCampaignInfo: Campaign?
+) {
+    val context = activity?.applicationContext
+    if (selectedCampaignInfo == null) {
+        Toast.makeText(context, "error: no campaign info provided", Toast.LENGTH_SHORT).show()
+        return
+    }
     val dbManager = DataBaseManager(context)
-    var createdCampaignId: Int
-    var createdScenarioId: Int
-    //preset campaign infor
-    val userId = 1 //TODO: this is a placeholder, in the future, it will have to pick the users id and add it to the campaign
-    val instancedCampaign = selectedCampaignInfo?.let {
-        InstanceCampaign(
-            id = 0,
-           presetCampaignId = presetCampaignId,
-            name = it.name,
-            description = it.description,
-            scenarioList = arrayListOf(),
-            userId = userId,
-            userName = "",
-            playerNum = playerCount,
+    val userId = 1 // Placeholder
+
+    // --- STEP 1: Create the Campaign shell first to get its real ID ---
+    val newInstancedCampaign = InstanceCampaign(
+        id = 0, // Will get from DB
+        presetCampaignId = presetCampaignId,
+        name = selectedCampaignInfo.name,
+        description = selectedCampaignInfo.description,
+        scenarioList = arrayListOf(), // Will be populated later
+        userId = userId,
+        userName = "", // Placeholder
+        playerNum = playerCount,
+        startDate = LocalDateTime.now(),
+        endDate = LocalDateTime.now(),
+        difficulty = difficulty
+    )
+    // Add the campaign to the DB to get its REAL ID
+    val finalCampaignId = dbManager.addCampaign(newInstancedCampaign).toInt()
+    Toast.makeText(context, "${newInstancedCampaign.name} has been created!", Toast.LENGTH_SHORT).show()
+    Log.d("DEBUG_QUESTIONS_SCENARIO", "scenario list size: ${selectedCampaignInfo.scenarioList[0].questionList.size}")
+
+    // --- STEP 2: Now create Scenarios and Questions using the final campaign ID ---
+    for ((index, presetScenario) in selectedCampaignInfo.scenarioList.withIndex()) {
+        val scenarioStatus = if (index == 0) "current" else "locked"
+
+        // Create the scenario with the CORRECT campaign ID from the start
+        val instancedScenario = InstanceScenario(
+            id = 0, // Will get from DB
+            instanceCampaignId = finalCampaignId, // USE THE REAL ID!
+            presetScenarioId = presetScenario.id,
+            name = presetScenario.name,
+            villainName = presetScenario.villainName,
+            description = presetScenario.description,
+            questionList = arrayListOf(),
             startDate = LocalDateTime.now(),
             endDate = LocalDateTime.now(),
-            difficulty = difficulty) }
-
-    if (instancedCampaign != null) {
-        createdCampaignId = dbManager.addCampaign(instancedCampaign).toInt()
-        Toast.makeText(context, "${instancedCampaign.name} has been created!", Toast.LENGTH_SHORT).show()
-
-        for(hero in heroes){
-            val instancedHero = InstanceHero(
-                id = 0,
-                presetHeroId = hero.id,
-                instanceCampaignId = createdCampaignId,
-                credits = 0,
-                name = hero.name,
-                currentLife = hero.initialLife,
-                modDate = LocalDateTime.now()
-
+            status = scenarioStatus
+        )
+        // Add the scenario to the DB to get its real ID
+        val finalScenarioId = dbManager.addScenario(instancedScenario).toInt()
+        Log.d("DEBUG_QUESTIONLIST_ON_CAMPAIGN_CREATION", "question list: ${presetScenario.questionList.size}")
+        Log.d("DEBUG_QUESTIONLIST_ON_CAMPAIGN_CREATION", "question list: ${presetScenario.questionList.size}")
+        // Now create questions, linking them to the real scenario ID
+        for (presetQuestion in presetScenario.questionList) {
+            val instancedQuestion = InstanceMarvelQuestion(
+                id = 0, // Will get from DB
+                instanceScenarioId = finalScenarioId, // Use the final scenario ID
+                presetQuestionId = presetQuestion.id,
+                text = presetQuestion.text,
+                answer = " ", // Default empty answer
+                questionType = QuestionType.valueOf(presetQuestion.type)
             )
-            dbManager.addHero(instancedHero)
-            Toast.makeText(context, "${instancedHero.name} has been created!", Toast.LENGTH_SHORT).show()
-
+            dbManager.addQuestion(instancedQuestion)
         }
-
-        for (scenario in selectedCampaignInfo.scenarioList){
-            val instancedScenario = InstanceScenario(
-                 id = 0,
-             instanceCampaignId = createdCampaignId,
-             presetScenarioId = scenario.id,
-             name = scenario.name,
-             villainName = scenario.villainName,
-             description = scenario.description,
-             questionList = scenario.questionList,
-             startDate = LocalDateTime.now(),
-             endDate = LocalDateTime.now(),
-             status = "pending" //check what the wording for the status will be.
-            )
-
-            createdScenarioId = dbManager.addScenario(instancedScenario).toInt()
-            Toast.makeText(context, "${instancedScenario.name} has been created!", Toast.LENGTH_SHORT).show()
-
-            for(question in scenario.questionList){
-                val instancedQuestion = InstanceMarvelQuestion(
-                    id = 0,
-                    instanceScenarioId = createdScenarioId,
-                    presetQuestionId = question.id,
-                    text = question.text,
-                    answer = " "
-                )
-
-                dbManager.addQuestion(instancedQuestion)
-                Toast.makeText(context, "${instancedQuestion.id} has been created!", Toast.LENGTH_SHORT).show()
-            }
-        }
-
     }
+
+    // --- STEP 3: Create the Heroes using the final campaign ID ---
+    for (hero in heroes) {
+        val instancedHero = InstanceHero(
+            id = 0,
+            presetHeroId = hero.id,
+            instanceCampaignId = finalCampaignId, // Use the final campaign ID
+            credits = 0,
+            name = hero.name,
+            currentLife = hero.initialLife,
+            upgrades = emptyList(),
+            modDate = LocalDateTime.now()
+        )
+        dbManager.addHero(instancedHero)
+        Toast.makeText(context, "${instancedHero.name} has been added!", Toast.LENGTH_SHORT).show()
+    }
+
+    // --- Finalize and finish the activity ---
+    Toast.makeText(context, "${newInstancedCampaign.name} campaign fully configured!", Toast.LENGTH_LONG).show()
+    activity?.setResult(Activity.RESULT_OK)
+    activity?.finish()
+}
+
+
 
     //TODO: MAYBE UPGRADES TOO, BUT NOT YET
 
-}
+
 
 
 @RequiresApi(Build.VERSION_CODES.O)
@@ -534,19 +559,19 @@ fun NewCampaignCreationScreenPreview() {
                 1,
                 "The Rise of Red Skull",
                 "The Red Skull is rising...",
-                listOf(Scenario(1, "dummy", "dummy", "dummy", listOf(MarvelQuestion(1, "q", "a"))))
+                listOf(Scenario(1, "dummy", "dummy", "dummy", listOf(MarvelQuestion(1, "q", "a", "type"))))
             ),
             Campaign(
                 2,
                 "Galaxy's Most Wanted",
                 "The Guardians of the Galaxy are in trouble...",
-                listOf(Scenario(2, "dummy2", "dummy2", "dummy2", listOf(MarvelQuestion(2, "q2", "a2"))))
+                listOf(Scenario(2, "dummy2", "dummy2", "dummy2", listOf(MarvelQuestion(2, "q2", "a2", "type"))))
             ),
             Campaign(
                 3, // <--- FIX: ADD THE COMMA HERE
                 "The Mad Titan's Shadow",
                 "Thanos is coming...",
-                listOf(Scenario(3, "dummy3", "dummy3", "dummy3", listOf(MarvelQuestion(3, "q3", "a3"))))
+                listOf(Scenario(3, "dummy3", "dummy3", "dummy3", listOf(MarvelQuestion(3, "q3", "a3", "type"))))
             )
         )
 

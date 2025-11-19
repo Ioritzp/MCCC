@@ -12,8 +12,11 @@ import androidx.annotation.RequiresApi
 import androidx.core.database.sqlite.transaction
 import org.mindrot.jbcrypt.BCrypt
 import java.time.LocalDateTime
+import Classes.*
+import android.util.Log
+import androidx.annotation.experimental.Experimental
 
-class DataBaseManager(context: Context): SQLiteAssetHelper(context, DATABASE_NAME, null, DATABASE_VERSION) {
+class DataBaseManager(context: Context?): SQLiteAssetHelper(context, DATABASE_NAME, null, DATABASE_VERSION) {
     companion object DBConstants{
     //DBDetails
     const val DATABASE_NAME = "marvel_champions_preset.db"
@@ -46,6 +49,7 @@ class DataBaseManager(context: Context): SQLiteAssetHelper(context, DATABASE_NAM
         const val COLUMN_PRESET_QUESTION_ID ="id_preset_pregunta"
         const val COLUMN_PRESET_SCENARIO_ID_FK ="id_preset_escenario_fk"
         const val COLUMN_PRESET_QUESTION_TEXT = "texto"
+        const val COLUMN_PRESET_QUESTION_TYPE = "tipo_pregunta"
 
         //preset mejoras
         const val TABLE_PRESET_UPGRADES = "mejora_preset"
@@ -53,6 +57,8 @@ class DataBaseManager(context: Context): SQLiteAssetHelper(context, DATABASE_NAM
         const val COLUMN_PRESET_CAMPAIGN_ID_FK_3 ="id_preset_campana_fk"
         const val COLUMN_PRESET_UPGRADE_NAME = "nombre"
         const val COLUMN_PRESET_UPGRADE_TYPE = "tipo"
+        const val COLUMN_PRESET_UPGRADE_IS_DISPOSABLE = "consumible"
+        const val COLUMN_PRESET_SCENARIO_ID_FK_3 = "id_preset_escenario_fk"
 
         //users table
         const val TABLE_USERS = "usuarios"
@@ -67,7 +73,7 @@ class DataBaseManager(context: Context): SQLiteAssetHelper(context, DATABASE_NAM
         const val COLUMN_INSTANCE_HERO_ID = "id_instancia_heroe"
         const val COLUMN_INSTANCE_CAMPAIGN_ID_FK = "id_instancia_campana_fk"
         const val COLUMN_PRESET_HERO_ID_FK = "id_heroe_fk"
-        const val COLUMN_INSTANCE_HERO_CREDITS = "Creditos"
+        const val COLUMN_INSTANCE_HERO_CREDITS = "creditos"
         const val COLUMN_INSTANCE_HERO_NAME = "nombre"
         const val COLUMN_INSTANCE_HERO_CURRENTLIFE = "vida"
         const val COLUMN_INSTANCE_HERO_MODIFICATIONDATE = "fecha_modificacion"
@@ -104,10 +110,13 @@ class DataBaseManager(context: Context): SQLiteAssetHelper(context, DATABASE_NAM
         const val COLUMN_INSTANCE_UPGRADE_ID ="id_instancia_mejora"
         const val COLUMN_PRESET_UPGRADE_ID_FK ="id_preset_mejora_fk"
         const val COLUMN_INSTANCE_HERO_ID_FK = "id_instancia_heroe_fk"
+        const val COLUMN_INSTANCE_CAMPAIGN_ID_FK_3 = "id_instancia_campana_fk"
+        const val COLUMN_INSTANCE_UPGRADE_STATUS = "status"
 
 }
 
     //Custom onUpgrade for keeping user data when updating the db (temporary - planning to move to 2 databases after the project)
+    @RequiresApi(Build.VERSION_CODES.JELLY_BEAN)
     override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
         //The override checks if the version has changed before doing anything
         if (newVersion > oldVersion){
@@ -141,6 +150,7 @@ class DataBaseManager(context: Context): SQLiteAssetHelper(context, DATABASE_NAM
 
     //fetch methods for custom onUpgrade
 
+    @RequiresApi(Build.VERSION_CODES.JELLY_BEAN)
     @SuppressLint("Range")
     private fun fetchAllUsers(db: SQLiteDatabase): List<ContentValues>{
         val list = mutableListOf<ContentValues>()
@@ -161,6 +171,7 @@ class DataBaseManager(context: Context): SQLiteAssetHelper(context, DATABASE_NAM
         return list
     }
 
+    @RequiresApi(Build.VERSION_CODES.JELLY_BEAN)
     @SuppressLint("Range")
     private fun fetchAllCampaignInstances(db: SQLiteDatabase): List<ContentValues>{
         val list = mutableListOf<ContentValues>()
@@ -182,6 +193,7 @@ class DataBaseManager(context: Context): SQLiteAssetHelper(context, DATABASE_NAM
         return list
     }
 
+    @RequiresApi(Build.VERSION_CODES.JELLY_BEAN)
     @SuppressLint("Range")
     private fun fetchAllHeroInstances(db: SQLiteDatabase): List<ContentValues>{
         val list = mutableListOf<ContentValues>()
@@ -205,6 +217,7 @@ class DataBaseManager(context: Context): SQLiteAssetHelper(context, DATABASE_NAM
         return list
     }
 
+    @RequiresApi(Build.VERSION_CODES.JELLY_BEAN)
     @SuppressLint("Range")
     private fun fetchAllScenarioInstances(db: SQLiteDatabase): List<ContentValues>{
         val list = mutableListOf<ContentValues>()
@@ -226,6 +239,7 @@ class DataBaseManager(context: Context): SQLiteAssetHelper(context, DATABASE_NAM
         return list
     }
 
+    @RequiresApi(Build.VERSION_CODES.JELLY_BEAN)
     @SuppressLint("Range")
     private fun fetchAllQuestionInstances(db: SQLiteDatabase): List<ContentValues>{
         val list = mutableListOf<ContentValues>()
@@ -245,6 +259,7 @@ class DataBaseManager(context: Context): SQLiteAssetHelper(context, DATABASE_NAM
         return list
     }
 
+    @RequiresApi(Build.VERSION_CODES.JELLY_BEAN)
     @SuppressLint("Range")
     private fun fetchAllUpgradesInstances(db: SQLiteDatabase): List<ContentValues>{
         val list = mutableListOf<ContentValues>()
@@ -459,7 +474,8 @@ class DataBaseManager(context: Context): SQLiteAssetHelper(context, DATABASE_NAM
                 do {
                     val id = cursor.getInt(cursor.getColumnIndex(COLUMN_PRESET_QUESTION_ID))
                     val text = cursor.getString(cursor.getColumnIndex(COLUMN_PRESET_QUESTION_TEXT))
-                    val question = MarvelQuestion(id, text, " ")
+                    val type = cursor.getString(cursor.getColumnIndex(COLUMN_PRESET_QUESTION_TYPE))
+                    val question = MarvelQuestion(id, text, " ", type)
                     questionList.add(question)
                 } while (cursor.moveToNext())
             }
@@ -486,7 +502,8 @@ class DataBaseManager(context: Context): SQLiteAssetHelper(context, DATABASE_NAM
                     val id = cursor.getInt(cursor.getColumnIndex(COLUMN_PRESET_UPGRADE_ID))
                     val name = cursor.getString(cursor.getColumnIndex(COLUMN_PRESET_UPGRADE_NAME))
                     val type = cursor.getString(cursor.getColumnIndex(COLUMN_PRESET_UPGRADE_TYPE))
-                    val upgrade = Upgrade(id, name, type)
+                    val isDisposable = cursor.getInt(cursor.getColumnIndex(COLUMN_PRESET_UPGRADE_IS_DISPOSABLE))
+                    val upgrade = Upgrade(id, name, type, isDisposable)
                     upgradeList.add(upgrade)
                 } while (cursor.moveToNext())
             }
@@ -532,7 +549,9 @@ class DataBaseManager(context: Context): SQLiteAssetHelper(context, DATABASE_NAM
                     val description =
                         cursor.getString(cursor.getColumnIndex(COLUMN_PRESET_SCENARIO_DESCRIPTION))
 
-                    val scenario = Scenario(id, name, villainName, description, emptyList())
+                    val questionsForThisScenario = getQuestionsForScenario(db, id)
+
+                    val scenario = Scenario(id, name, villainName, description, questionsForThisScenario)
                     scenarioList.add(scenario)
 
                 } while (cursor.moveToNext())
@@ -571,8 +590,9 @@ class DataBaseManager(context: Context): SQLiteAssetHelper(context, DATABASE_NAM
                 do {
                     val id = cursor.getInt(cursor.getColumnIndex(COLUMN_PRESET_QUESTION_ID))
                     val text = cursor.getString(cursor.getColumnIndex(COLUMN_PRESET_QUESTION_TEXT))
+                    val type = cursor.getString(cursor.getColumnIndex(COLUMN_PRESET_QUESTION_TYPE))
 
-                    val question = MarvelQuestion(id, text, " ")
+                    val question = MarvelQuestion(id, text, " ", type)
                     questionList.add(question)
                 } while (cursor.moveToNext())
             }
@@ -646,6 +666,7 @@ class DataBaseManager(context: Context): SQLiteAssetHelper(context, DATABASE_NAM
 
     //region instanced campaigns
 
+    @RequiresApi(Build.VERSION_CODES.O)
     @SuppressLint("Range")
     fun addCampaign(campaign: InstanceCampaign): Long{
         val db = this.writableDatabase
@@ -653,15 +674,15 @@ class DataBaseManager(context: Context): SQLiteAssetHelper(context, DATABASE_NAM
             val values = ContentValues().apply {
                 put(COLUMN_PRESET_CAMPAIGN_ID_FK_2, campaign.presetCampaignId)
                 put(COLUMN_INSTANCE_CAMPAIGN_PLAYERNUM, campaign.playerNum)
-                put(COLUMN_INSTANCE_CAMPAIGN_STARTDATE, campaign.startDate.toString())
-                put(COLUMN_INSTANCE_CAMPAIGN_ENDDATE, campaign.endDate.toString())
+                put(COLUMN_INSTANCE_CAMPAIGN_STARTDATE, campaign.startDate.toLocalDate().toString())
+                put(COLUMN_INSTANCE_CAMPAIGN_ENDDATE, campaign.endDate.toLocalDate().toString())
                 put(COLUMN_INSTANCE_USER_ID_FK, campaign.userId)
                 put(COLUMN_INSTANCE_CAMPAIGN_DIFFICULTY, campaign.difficulty)
 
             }
 
             val newCampaignId = db.insert(TABLE_INSTANCE_CAMPAIGNS, null, values)
-            db.close()
+
 
         return newCampaignId
 
@@ -672,10 +693,11 @@ class DataBaseManager(context: Context): SQLiteAssetHelper(context, DATABASE_NAM
     fun readCampaigns(): List<InstanceCampaign> {
         val campaignList = mutableListOf<InstanceCampaign>()
         val db = this.readableDatabase
-
         var cursor: Cursor? = null
-        //SQL query for name,
-        val query = """
+        try {
+
+            //SQL query for name,
+            val query = """
             SELECT
                 ic.*,
                 pc.$COLUMN_PRESET_CAMPAIGN_NAME,
@@ -686,22 +708,33 @@ class DataBaseManager(context: Context): SQLiteAssetHelper(context, DATABASE_NAM
                 $TABLE_PRESET_CAMPAIGNS pc ON ic.$COLUMN_PRESET_CAMPAIGN_ID_FK_2 = pc.$COLUMN_PRESET_CAMPAIGN_ID
     """
 
-        try {
+
             cursor = db.rawQuery(query, null)
             if (cursor.moveToFirst()) {
                 do {
                     //get data from preset
-                    val name = cursor.getString(cursor.getColumnIndex(COLUMN_PRESET_CAMPAIGN_NAME))
-                    val description = cursor.getString(cursor.getColumnIndex(COLUMN_PRESET_CAMPAIGN_DESCRIPTION))
+                    val name =
+                        cursor.getString(cursor.getColumnIndex(COLUMN_PRESET_CAMPAIGN_NAME))
+                    val description = cursor.getString(
+                        cursor.getColumnIndex(COLUMN_PRESET_CAMPAIGN_DESCRIPTION)
+                    )
 
                     // Get data from instance
                     val id = cursor.getInt(cursor.getColumnIndex(COLUMN_INSTANCE_CAMPAIGN_ID))
-                    val presetCampaignId = cursor.getInt(cursor.getColumnIndex(COLUMN_PRESET_CAMPAIGN_ID_FK_2))
-                    val playerNum = cursor.getInt(cursor.getColumnIndex(COLUMN_INSTANCE_CAMPAIGN_PLAYERNUM))
-                    val startDateStr = cursor.getString(cursor.getColumnIndex(COLUMN_INSTANCE_CAMPAIGN_STARTDATE))
-                    val endDateStr = cursor.getString(cursor.getColumnIndex(COLUMN_INSTANCE_CAMPAIGN_ENDDATE))
-                    val userId = cursor.getInt(cursor.getColumnIndex(COLUMN_INSTANCE_USER_ID_FK))
-                    val difficulty = cursor.getString(cursor.getColumnIndex(COLUMN_INSTANCE_CAMPAIGN_DIFFICULTY))
+                    val presetCampaignId =
+                        cursor.getInt(cursor.getColumnIndex(COLUMN_PRESET_CAMPAIGN_ID_FK_2))
+                    val playerNum =
+                        cursor.getInt(cursor.getColumnIndex(COLUMN_INSTANCE_CAMPAIGN_PLAYERNUM))
+                    val startDateStr = cursor.getString(
+                        cursor.getColumnIndex(COLUMN_INSTANCE_CAMPAIGN_STARTDATE)
+                    )
+                    val endDateStr =
+                        cursor.getString(cursor.getColumnIndex(COLUMN_INSTANCE_CAMPAIGN_ENDDATE))
+                    val userId =
+                        cursor.getInt(cursor.getColumnIndex(COLUMN_INSTANCE_USER_ID_FK))
+                    val difficulty = cursor.getString(
+                        cursor.getColumnIndex(COLUMN_INSTANCE_CAMPAIGN_DIFFICULTY)
+                    )
 
                     val campaign = InstanceCampaign(
                         id = id,
@@ -712,20 +745,21 @@ class DataBaseManager(context: Context): SQLiteAssetHelper(context, DATABASE_NAM
                         userId = userId,
                         userName = " ",
                         playerNum = playerNum,
-                        startDate = LocalDateTime.parse(startDateStr),
-                        endDate = LocalDateTime.parse(endDateStr),
+                        startDate = LocalDateTime.parse(startDateStr + "T00:00:00"),
+                        endDate = LocalDateTime.parse(endDateStr + "T00:00:00"),
                         difficulty = difficulty
                     )
 
                     campaignList.add(campaign)
                 } while (cursor.moveToNext())
             }
-        } catch (e: Exception){
+        }catch (e: Exception){
             e.printStackTrace()
-        } finally {
-            cursor?.close()
-        }
+        }finally {
 
+            cursor?.close()
+
+        }
         return campaignList
 
     }
@@ -765,7 +799,6 @@ class DataBaseManager(context: Context): SQLiteAssetHelper(context, DATABASE_NAM
                     val villainName = cursor.getString(cursor.getColumnIndex(COLUMN_PRESET_VILLAIN_NAME))
 
                     val id = cursor.getInt(cursor.getColumnIndex(COLUMN_INSTANCE_SCENARIO_ID))
-                    val instanceCampaignId = cursor.getInt(cursor.getColumnIndex(COLUMN_INSTANCE_CAMPAIGN_ID_FK_2))
                     val presetScenarioId = cursor.getInt(cursor.getColumnIndex(COLUMN_PRESET_SCENARIO_ID_FK_2))
                     val startDateStr = cursor.getString(cursor.getColumnIndex(COLUMN_INSTANCE_SCENARIO_STARTDATE))
                     val endDateStr = cursor.getString(cursor.getColumnIndex(COLUMN_INSTANCE_SCENARIO_ENDDATE))
@@ -773,14 +806,14 @@ class DataBaseManager(context: Context): SQLiteAssetHelper(context, DATABASE_NAM
 
                     val scenario = InstanceScenario(
                         id = id,
-                        instanceCampaignId = instanceCampaignId,
+                        instanceCampaignId = campaignId,
                         presetScenarioId = presetScenarioId,
                         name = name,
                         description = description,
                         questionList = readQuestionsForScenario(id), // This still calls the next level down
                         villainName = villainName,
-                        startDate = LocalDateTime.parse(startDateStr),
-                        endDate = LocalDateTime.parse(endDateStr),
+                        startDate = LocalDateTime.parse(startDateStr + "T00:00:00"),
+                        endDate = LocalDateTime.parse(endDateStr + "T00:00:00"),
                         status = status
                     )
                     scenarioList.add(scenario)
@@ -794,6 +827,111 @@ class DataBaseManager(context: Context): SQLiteAssetHelper(context, DATABASE_NAM
         return scenarioList
     }
 
+    //TODO: AFTER THE LOGINS, VERIF AND FRONT, CAMPAIGN COMPLETION CODE: WHEN LAST SCENARIO IS DONE, THIS FUNCTION IS CALLED AND THE CAMPAIGN IS SET TO COMPLETED.
+    @RequiresApi(Build.VERSION_CODES.O)
+    fun updateCampaign(campaign: InstanceCampaign) {
+        val db = this.writableDatabase
+        val values = ContentValues().apply {
+            put(COLUMN_PRESET_CAMPAIGN_ID_FK_2, campaign.presetCampaignId)
+            put(COLUMN_INSTANCE_CAMPAIGN_PLAYERNUM, campaign.playerNum)
+            put(COLUMN_INSTANCE_CAMPAIGN_STARTDATE, campaign.startDate.toLocalDate().toString())
+            put(COLUMN_INSTANCE_CAMPAIGN_ENDDATE, campaign.endDate.toLocalDate().toString())
+            put(COLUMN_INSTANCE_USER_ID_FK, campaign.userId)
+            put(COLUMN_INSTANCE_CAMPAIGN_DIFFICULTY, campaign.difficulty)
+        }
+        // Update the row in the database where the scenario ID matches
+        db.update(
+            TABLE_INSTANCE_CAMPAIGNS,
+            values, "$COLUMN_INSTANCE_CAMPAIGN_ID = ?",
+            arrayOf(campaign.id.toString()))
+
+    }
+
+    @RequiresApi(Build.VERSION_CODES.O)
+    @SuppressLint("Range")
+    fun getCampaignById(campaignId: Int): InstanceCampaign? {
+        val db = this.readableDatabase
+        var cursor: Cursor? = null
+        var campaign: InstanceCampaign? = null
+
+        // Query to join the instance table with the preset table
+        val query = """
+        SELECT
+            ic.*,
+            pc.$COLUMN_PRESET_CAMPAIGN_NAME,
+            pc.$COLUMN_PRESET_CAMPAIGN_DESCRIPTION
+        FROM
+            $TABLE_INSTANCE_CAMPAIGNS ic
+        JOIN
+            $TABLE_PRESET_CAMPAIGNS pc ON ic.$COLUMN_PRESET_CAMPAIGN_ID_FK_2 = pc.$COLUMN_PRESET_CAMPAIGN_ID
+        WHERE
+            ic.$COLUMN_INSTANCE_CAMPAIGN_ID = ?
+    """
+
+        try {
+            cursor = db.rawQuery(query, arrayOf(campaignId.toString()))
+
+            if (cursor.moveToFirst()) {
+                // Get all the real data from the cursor
+                val id = cursor.getInt(cursor.getColumnIndex(COLUMN_INSTANCE_CAMPAIGN_ID))
+                val presetCampaignId = cursor.getInt(cursor.getColumnIndex(COLUMN_PRESET_CAMPAIGN_ID_FK_2))
+                val playerNum = cursor.getInt(cursor.getColumnIndex(COLUMN_INSTANCE_CAMPAIGN_PLAYERNUM))
+                val startDateStr = cursor.getString(cursor.getColumnIndex(COLUMN_INSTANCE_CAMPAIGN_STARTDATE))
+                val endDateStr = cursor.getString(cursor.getColumnIndex(COLUMN_INSTANCE_CAMPAIGN_ENDDATE))
+                val userId = cursor.getString(cursor.getColumnIndex(COLUMN_INSTANCE_USER_ID_FK))
+                val difficulty = cursor.getString(cursor.getColumnIndex(COLUMN_INSTANCE_CAMPAIGN_DIFFICULTY))
+
+                // Get the name and description from the JOINED preset table
+                val name = cursor.getString(cursor.getColumnIndex(COLUMN_PRESET_CAMPAIGN_NAME))
+                val description = cursor.getString(cursor.getColumnIndex(COLUMN_PRESET_CAMPAIGN_DESCRIPTION))
+
+                // Reconstruct the full InstanceCampaign object with real data
+                campaign = InstanceCampaign(
+                    id = id,
+                    presetCampaignId = presetCampaignId,
+                    name = name,
+                    description = description,
+                    playerNum = playerNum,
+                    startDate = LocalDateTime.parse(startDateStr + "T00:00:00"),
+                    endDate = LocalDateTime.parse(endDateStr + "T00:00:00"),
+                    userId = userId.toInt(),
+                    difficulty = difficulty,
+                    // These are fetched separately to avoid circular dependencies
+                    scenarioList = arrayListOf(),
+                    userName = "" // This can be fetched with another JOIN if needed
+                )
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        } finally {
+            cursor?.close()
+        }
+        return campaign
+    }
+
+    @SuppressLint("Range")
+    fun getPresetCampaignIdByInstanceId(instanceCampaignId: Int): Int{
+        val db = this.readableDatabase
+        var cursor: Cursor? = null
+        var presetCampaignId = -1 //Preset value just in case
+
+        val query = "SELECT $COLUMN_PRESET_CAMPAIGN_ID_FK_2 FROM $TABLE_INSTANCE_CAMPAIGNS WHERE $COLUMN_INSTANCE_CAMPAIGN_ID = ?"
+
+        try {
+            cursor = db.rawQuery(query, arrayOf(instanceCampaignId.toString()))
+            if(cursor.moveToFirst()){
+                presetCampaignId = cursor.getInt(cursor.getColumnIndex(COLUMN_PRESET_CAMPAIGN_ID_FK_2))
+            }
+        } catch (err: Exception){
+            Log.e("DB_ERROR", "Error getting campaign id")
+            err.printStackTrace()
+        } finally {
+            cursor?.close()
+        }
+
+        return presetCampaignId
+
+    }
 
     //region instanced heroes
     @RequiresApi(Build.VERSION_CODES.O)
@@ -808,10 +946,84 @@ class DataBaseManager(context: Context): SQLiteAssetHelper(context, DATABASE_NAM
                 put(COLUMN_INSTANCE_HERO_CREDITS, hero.credits)
                 put(COLUMN_INSTANCE_HERO_MODIFICATIONDATE, hero.modDate.toLocalDate().toString())
                 put(COLUMN_INSTANCE_HERO_MODIFICATIONHOUR, hero.modDate.toLocalTime().toString())
+                put(COLUMN_INSTANCE_HERO_CURRENTLIFE, hero.currentLife)
             }
 
             db.insert(TABLE_INSTANCE_HEROES, null, values)
-            db.close()
+
+    }
+
+    @RequiresApi(Build.VERSION_CODES.O)
+    @SuppressLint("Range")
+    fun getHeroesByCampaignId(campaignId: Int): List<InstanceHero>{
+        Log.d("DB_DEBUG", "Fetching heroes for campaignId: $campaignId")
+        val db = this.readableDatabase
+        var cursor: Cursor? = null
+        val heroList = mutableListOf<InstanceHero>()
+
+        // Query to join the instance table with the preset table
+        val query = """
+        SELECT * FROM $TABLE_INSTANCE_HEROES
+        WHERE $COLUMN_INSTANCE_CAMPAIGN_ID_FK = ?
+    """
+
+        try {
+            cursor = db.rawQuery(query, arrayOf(campaignId.toString()))
+            Log.d("DB_DEBUG", "Hero cursor found ${cursor.count} rows.")
+
+            if (cursor.moveToFirst()) {
+                do {
+                    // Get all the real data from the cursor
+                    val id = cursor.getInt(cursor.getColumnIndex(COLUMN_INSTANCE_HERO_ID))
+                    val presetHeroId = cursor.getInt(cursor.getColumnIndex(COLUMN_PRESET_HERO_ID_FK))
+                    val credits = cursor.getInt(cursor.getColumnIndex(COLUMN_INSTANCE_HERO_CREDITS))
+                    val name = cursor.getString(cursor.getColumnIndex(COLUMN_INSTANCE_HERO_NAME))
+                    val currentLife = cursor.getInt(cursor.getColumnIndex(COLUMN_INSTANCE_HERO_CURRENTLIFE))
+                    val modData = cursor.getString(cursor.getColumnIndex(COLUMN_INSTANCE_HERO_MODIFICATIONDATE))
+                    val modTime = cursor.getString(cursor.getColumnIndex(COLUMN_INSTANCE_HERO_MODIFICATIONHOUR))
+                    val heroUpgrades = getUpgradesForHero(id)
+
+
+                    val hero = InstanceHero(
+                        id = id,
+                        presetHeroId = presetHeroId,
+                        instanceCampaignId = campaignId,
+                        credits = credits,
+                        name = name,
+                        currentLife = currentLife,
+                        upgrades = heroUpgrades,
+                        modDate = LocalDateTime.parse("${modData}T${modTime}")
+                    )
+                    heroList.add(hero)
+                }while(cursor.moveToNext())
+            }
+        } catch (e: Exception) {
+            Log.e("DB_CRITICAL_ERROR", "Failed to parse heroes for campaignId: $campaignId. Exception: ${e.message}")
+            Log.e("HERO_FETCH_FAILURE", "failed to parse heroes for campId: $campaignId. Exception: ${e.javaClass.simpleName} -> ${e.message}")
+            e.printStackTrace() // Keep this to see the full stack trace
+        } finally {
+            cursor?.close()
+        }
+        return heroList
+    }
+
+    @RequiresApi(Build.VERSION_CODES.O)
+    fun updateHero(hero: InstanceHero) {
+        val db = this.writableDatabase
+        val values = ContentValues().apply {
+            put(COLUMN_INSTANCE_CAMPAIGN_ID_FK, hero.instanceCampaignId)
+            put(COLUMN_PRESET_HERO_ID_FK, hero.presetHeroId)
+            put(COLUMN_INSTANCE_HERO_NAME, hero.name)
+            put(COLUMN_INSTANCE_HERO_CREDITS, hero.credits)
+            put(COLUMN_INSTANCE_HERO_MODIFICATIONDATE, hero.modDate.toLocalDate().toString())
+            put(COLUMN_INSTANCE_HERO_MODIFICATIONHOUR, hero.modDate.toLocalTime().toString())
+            put(COLUMN_INSTANCE_HERO_CURRENTLIFE, hero.currentLife)
+        }
+        // Update the row in the database where the scenario ID matches
+        db.update(
+            TABLE_INSTANCE_HEROES,
+            values, "$COLUMN_INSTANCE_HERO_ID = ?",
+            arrayOf(hero.id.toString()))
 
     }
 
@@ -825,12 +1037,11 @@ class DataBaseManager(context: Context): SQLiteAssetHelper(context, DATABASE_NAM
                 put(COLUMN_INSTANCE_CAMPAIGN_ID_FK_2, scenario.instanceCampaignId)
                 put(COLUMN_PRESET_SCENARIO_ID_FK_2, scenario.presetScenarioId)
                 put(COLUMN_INSTANCE_SCENARIO_STARTDATE, scenario.startDate.toLocalDate().toString())
-                put(COLUMN_INSTANCE_SCENARIO_ENDDATE, scenario.endDate.toLocalTime().toString())
+                put(COLUMN_INSTANCE_SCENARIO_ENDDATE, scenario.endDate.toLocalDate().toString())
                 put(COLUMN_INSTANCE_SCENARIO_STATUS, scenario.status)
             }
 
             val newScenarioId = db.insert(TABLE_INSTANCE_SCENARIOS, null, values)
-            db.close()
 
         return newScenarioId
     }
@@ -881,8 +1092,8 @@ class DataBaseManager(context: Context): SQLiteAssetHelper(context, DATABASE_NAM
                         description = description,
                         questionList = readQuestionsForScenario(id),
                         villainName = villainName,
-                        startDate = LocalDateTime.parse(startDateStr),
-                        endDate = LocalDateTime.parse(endDateStr),
+                        startDate = LocalDateTime.parse(startDateStr + "T00:00:00"),
+                        endDate = LocalDateTime.parse(endDateStr + "T00:00:00"),
                         status = status
                     )
 
@@ -909,8 +1120,12 @@ class DataBaseManager(context: Context): SQLiteAssetHelper(context, DATABASE_NAM
         // The query is the same as readQuestions, but with a WHERE clause
         val query = """
         SELECT
-            iq.*,
-            pq.$COLUMN_PRESET_QUESTION_TEXT
+            iq.$COLUMN_INSTANCE_QUESTION_ID,
+            iq.$COLUMN_INSTANCE_SCENARIO_ID_FK,
+            iq.$COLUMN_PRESET_QUESTION_ID_FK,
+            iq.$COLUMN_INSTANCE_QUESTION_ANSWER,
+            pq.$COLUMN_PRESET_QUESTION_TEXT,
+            pq.$COLUMN_PRESET_QUESTION_TYPE
         FROM
             $TABLE_INSTANCE_QUESTIONS iq
         JOIN
@@ -918,7 +1133,6 @@ class DataBaseManager(context: Context): SQLiteAssetHelper(context, DATABASE_NAM
         WHERE
             iq.$COLUMN_INSTANCE_SCENARIO_ID_FK = ?
     """
-
         try {
             // The '?' in the query is replaced by the scenarioId.
             // This is the safe way to prevent SQL injection attacks.
@@ -926,40 +1140,125 @@ class DataBaseManager(context: Context): SQLiteAssetHelper(context, DATABASE_NAM
 
             if (cursor.moveToFirst()) {
                 do {
-                    // Get data from the joined TABLE_PRESET_QUESTIONS
-                    val text = cursor.getString(cursor.getColumnIndex(COLUMN_PRESET_QUESTION_TEXT))
-
-                    // Get data from the TABLE_INSTANCE_QUESTIONS
+                    // Get data from the INSTANCE table columns
                     val id = cursor.getInt(cursor.getColumnIndex(COLUMN_INSTANCE_QUESTION_ID))
-                    val instanceScenarioId = cursor.getInt(cursor.getColumnIndex(COLUMN_INSTANCE_SCENARIO_ID_FK))
                     val presetQuestionId = cursor.getInt(cursor.getColumnIndex(COLUMN_PRESET_QUESTION_ID_FK))
                     val answer = cursor.getString(cursor.getColumnIndex(COLUMN_INSTANCE_QUESTION_ANSWER))
 
-                    // Create the InstanceMarvelQuestion object
-                    val question = InstanceMarvelQuestion(
+                    // Get data from the PRESET table columns via the JOIN
+                    val text = cursor.getString(cursor.getColumnIndex(COLUMN_PRESET_QUESTION_TEXT))
+                    val typeStr = cursor.getString(cursor.getColumnIndex(COLUMN_PRESET_QUESTION_TYPE))
+
+                    // Build the complete object
+                    val instancedQuestion = InstanceMarvelQuestion(
                         id = id,
-                        instanceScenarioId = instanceScenarioId,
+                        instanceScenarioId = scenarioId, // We already have this from the function parameter
                         presetQuestionId = presetQuestionId,
-                        text = text, // From the JOIN
-                        answer = answer
+                        text = text, // Now we have the text
+                        answer = answer,
+                        questionType = QuestionType.valueOf(typeStr) // And now we have the type
                     )
-                    questionList.add(question)
+                    questionList.add(instancedQuestion)
                 } while (cursor.moveToNext())
             }
         } catch (e: Exception) {
             e.printStackTrace()
+            Log.e("DB_QUESTION_FAIL", "Failed to read questions for scenario $scenarioId. Error: ${e.message}", e)
         } finally {
             cursor?.close()
         }
-
+        Log.d("DB_QUESTION_FETCH", "Found ${questionList.size} questions for scenario $scenarioId")
         return questionList
     }
 
+    @SuppressLint("Range")
+    @RequiresApi(Build.VERSION_CODES.O)
+    fun getScenarioById(scenarioId: Int): InstanceScenario? {
+        val db = this.readableDatabase
+        var cursor: Cursor? = null
+        var scenario: InstanceScenario? = null
+
+        val query = """
+            SELECT
+                ic.*,
+                pc.$COLUMN_PRESET_SCENARIO_NAME,
+                pc.$COLUMN_PRESET_SCENARIO_DESCRIPTION,
+                pc.$COLUMN_PRESET_VILLAIN_NAME
+            FROM
+                $TABLE_INSTANCE_SCENARIOS ic
+            JOIN
+                $TABLE_PRESET_SCENARIOS pc ON ic.$COLUMN_PRESET_SCENARIO_ID_FK_2 = pc.${COLUMN_PRESET_SCENARIO_ID}
+            WHERE
+                ic.$COLUMN_INSTANCE_SCENARIO_ID = ?
+        """
+        try{
+            cursor = db.rawQuery(query, arrayOf(scenarioId.toString()))
+            if (cursor.moveToFirst()) {
+                // Get data from the preset table join
+                val name = cursor.getString(cursor.getColumnIndex(COLUMN_PRESET_SCENARIO_NAME))
+                val description =
+                    cursor.getString(cursor.getColumnIndex(COLUMN_PRESET_SCENARIO_DESCRIPTION))
+                val villainName =
+                    cursor.getString(cursor.getColumnIndex(COLUMN_PRESET_VILLAIN_NAME))
+
+                // Get data from the instance table
+                val instanceCampaignId =
+                    cursor.getInt(cursor.getColumnIndex(COLUMN_INSTANCE_CAMPAIGN_ID_FK_2))
+                val presetScenarioId =
+                    cursor.getInt(cursor.getColumnIndex(COLUMN_PRESET_SCENARIO_ID_FK_2))
+                val startDateStr =
+                    cursor.getString(cursor.getColumnIndex(COLUMN_INSTANCE_SCENARIO_STARTDATE))
+                val endDateStr =
+                    cursor.getString(cursor.getColumnIndex(COLUMN_INSTANCE_SCENARIO_ENDDATE))
+                val status =
+                    cursor.getString(cursor.getColumnIndex(COLUMN_INSTANCE_SCENARIO_STATUS))
+
+                // Fetch the associated questions for this specific scenario
+                Log.d("GET_SCENARIO_DEBUG", "Successfully parsed scenario $scenarioId. Now fetching questions...")
+                val questions = readQuestionsForScenario(scenarioId)
+
+                // Build the complete scenario object
+                scenario = InstanceScenario(
+                    id = scenarioId,
+                    instanceCampaignId = instanceCampaignId,
+                    presetScenarioId = presetScenarioId,
+                    name = name,
+                    description = description,
+                    questionList = ArrayList(questions), // Use the correctly fetched questions
+                    villainName = villainName,
+                    startDate = LocalDateTime.parse("${startDateStr}T00:00:00"),
+                    endDate = LocalDateTime.parse("${endDateStr}T00:00:00"),
+                    status = status
+                )
+            }
+        } catch (error: Exception){
+            Log.e("DB_ERROR", "Failed to read scenario by id: $scenarioId")
+            error.printStackTrace()
+        } finally {
+            cursor?.close()
+        }
+       return scenario
+    }
+
+    fun updateScenarioStatus(scenarioId: Int, newStatus: String) {
+        val db = this.writableDatabase
+        val values = ContentValues().apply {
+            put(COLUMN_INSTANCE_SCENARIO_STATUS, newStatus)
+        }
+        // Update the row where the scenario ID matches
+        db.update(
+            TABLE_INSTANCE_SCENARIOS,
+            values,
+            "$COLUMN_INSTANCE_SCENARIO_ID = ?",
+            arrayOf(scenarioId.toString())
+        )
+
+    }
 
     //region instanced questions
 
     @SuppressLint("Range")
-    fun addQuestion(question: InstanceMarvelQuestion){
+    fun addQuestion(question: InstanceMarvelQuestion): Long{
         val db = this.writableDatabase
 
             val values = ContentValues().apply {
@@ -968,70 +1267,210 @@ class DataBaseManager(context: Context): SQLiteAssetHelper(context, DATABASE_NAM
                 put(COLUMN_INSTANCE_QUESTION_ANSWER, question.answer)
             }
 
-            db.insert(TABLE_INSTANCE_QUESTIONS, null, values)
-            db.close()
+            val newQuestionId = db.insert(TABLE_INSTANCE_QUESTIONS, null, values)
+
+        return newQuestionId
 
     }
 
-    @SuppressLint("Range")
-    fun readQuestions(): List<InstanceMarvelQuestion> {
-        val questionList = mutableListOf<InstanceMarvelQuestion>()
-        val db = this.readableDatabase
-
-        var cursor: Cursor? = null
-
-        val query = """
-            SELECT
-            iq.*,
-            pq.$COLUMN_PRESET_QUESTION_TEXT
-            FROM
-            $TABLE_INSTANCE_QUESTIONS iq
-            JOIN
-            $TABLE_PRESET_QUESTIONS pq ON iq.$COLUMN_PRESET_QUESTION_ID_FK = pq.$COLUMN_PRESET_QUESTION_ID
-        """
-        try {
-            cursor = db.rawQuery(query, null)
-            if (cursor.moveToFirst()) {
-                do {
-                    val text = cursor.getString(cursor.getColumnIndex((COLUMN_PRESET_QUESTION_TEXT)))
-
-                    val id = cursor.getInt(cursor.getColumnIndex(COLUMN_INSTANCE_QUESTION_ID))
-                    val instanceScenarioId = cursor.getInt(cursor.getColumnIndex(COLUMN_INSTANCE_SCENARIO_ID_FK))
-                    val presetQuestionId = cursor.getInt(cursor.getColumnIndex(COLUMN_PRESET_QUESTION_ID_FK))
-                    val answer = cursor.getString(cursor.getColumnIndex(COLUMN_INSTANCE_QUESTION_ANSWER))
-                    val question = InstanceMarvelQuestion(
-                        id = id,
-                        instanceScenarioId = instanceScenarioId,
-                        presetQuestionId = presetQuestionId,
-                        text = text,
-                        answer = answer
-                    )
-                    questionList.add(question)
-                } while (cursor.moveToNext())
-            }
-        } catch (e: Exception){
-            e.printStackTrace()
-        } finally {
-            cursor?.close()
+    @RequiresApi(Build.VERSION_CODES.O)
+    fun updateQuestion(question: InstanceMarvelQuestion) {
+        val db = this.writableDatabase
+        val values = ContentValues().apply {
+            put(COLUMN_PRESET_QUESTION_ID_FK, question.presetQuestionId)
+            put(COLUMN_INSTANCE_SCENARIO_ID_FK, question.instanceScenarioId)
+            put(COLUMN_INSTANCE_QUESTION_ANSWER, question.answer)
         }
+        // Update the row in the database where the scenario ID matches
+        db.update(
+            TABLE_INSTANCE_QUESTIONS,
+            values, "$COLUMN_INSTANCE_QUESTION_ID = ?",
+            arrayOf(question.id.toString()))
 
-        return questionList
     }
 
     //region instanced upgrades
 
     @SuppressLint("Range")
-    fun addUpgrade(upgrade: InstanceUpgrade){
-        val db = this.writableDatabase
+    fun getAvailableUpgrades(campaignId: Int, presetCampaignId: Int, completedScenarioId: Int): List<Upgrade>{
+        val upgradesScenarioId = completedScenarioId //-1
+        val upgradeList = mutableListOf<Upgrade>()
+        val db = this.readableDatabase
+        var cursor: Cursor? = null
 
-            val values = ContentValues().apply {
-                put(COLUMN_PRESET_UPGRADE_ID_FK, upgrade.presetUpgradeId)
-                put(COLUMN_INSTANCE_HERO_ID_FK, upgrade.heroInstanceId)
+        val query = """
+        SELECT * FROM $TABLE_PRESET_UPGRADES
+        WHERE $COLUMN_PRESET_CAMPAIGN_ID_FK_3 = ?
+        AND
+            $COLUMN_PRESET_UPGRADE_ID NOT IN(
+            SELECT $COLUMN_PRESET_UPGRADE_ID_FK FROM $TABLE_INSTANCE_UPGRADES
+            WHERE $COLUMN_INSTANCE_CAMPAIGN_ID_FK_3 = ?
+        )
+            AND (
+            $COLUMN_PRESET_SCENARIO_ID_FK_3 = 0 OR $COLUMN_PRESET_SCENARIO_ID_FK_3 = ?
+        )
+    """
+        Log.d("DB_UPGRADE_QUERY", "Executing query for preset: $presetCampaignId, campaignId: $campaignId, scenarioId: $upgradesScenarioId")
+        Log.d("DB_UPGRADE_QUERY", "Query: $query")
+
+        try{
+            cursor = db.rawQuery(query, arrayOf(presetCampaignId.toString(), campaignId.toString(), upgradesScenarioId.toString()))
+            Log.d("DB_UPGRADE_RESULT", "Query returned ${cursor.count} rows.")
+
+            if(cursor.moveToFirst()){
+                Log.d("DB_UPGRADE_PARSE", "Cursor is not empty. Starting to parse rows...")
+                do {
+                    val id = cursor.getInt(cursor.getColumnIndex(COLUMN_PRESET_UPGRADE_ID))
+                    val name = cursor.getString(cursor.getColumnIndex(COLUMN_PRESET_UPGRADE_NAME))
+                    val type = cursor.getString(cursor.getColumnIndex(COLUMN_PRESET_UPGRADE_TYPE))
+                    val disposable =
+                        cursor.getInt(cursor.getColumnIndex(COLUMN_PRESET_UPGRADE_IS_DISPOSABLE))
+
+                    val upgrade = Upgrade(id, name, type, disposable)
+                    upgradeList.add(upgrade)
+                }while(cursor.moveToNext())
             }
 
-            db.insert(TABLE_INSTANCE_UPGRADES, null, values)
-            db.close()
+        } catch (e: Exception){
+            e.printStackTrace()
+        } finally {
+            cursor?.close()
+        }
+        return upgradeList
+    }
 
+    fun assignUpgradeToHero(campaignId: Int, presetUpgradeId: Int, heroId: Int) {
+        val db = this.writableDatabase
+        val values = ContentValues().apply {
+            put(COLUMN_INSTANCE_CAMPAIGN_ID_FK, campaignId)
+            put(COLUMN_PRESET_UPGRADE_ID_FK, presetUpgradeId)
+            put(COLUMN_INSTANCE_HERO_ID_FK, heroId)
+            put(COLUMN_INSTANCE_UPGRADE_STATUS, "active") // Start as active
+        }
+        db.insert(TABLE_INSTANCE_UPGRADES, null, values)
+    }
+
+    @SuppressLint("Range")
+    fun getUpgradesForHero(heroId: Int): List<InstanceUpgrade> {
+        val assignedUpgrades = mutableListOf<InstanceUpgrade>()
+        val db = this.readableDatabase
+        var cursor: Cursor? = null
+
+        // This query joins the instance upgrades table with the preset upgrades table
+        // to get the full details of each upgrade assigned to the specified hero.
+        val query = """
+            SELECT
+                iu.$COLUMN_INSTANCE_UPGRADE_ID,
+                iu.$COLUMN_INSTANCE_CAMPAIGN_ID_FK,
+                iu.$COLUMN_PRESET_UPGRADE_ID_FK,
+                iu.$COLUMN_INSTANCE_HERO_ID_FK,
+                iu.$COLUMN_INSTANCE_UPGRADE_STATUS,
+                pu.$COLUMN_PRESET_UPGRADE_NAME,
+                pu.$COLUMN_PRESET_UPGRADE_IS_DISPOSABLE
+            FROM
+                $TABLE_INSTANCE_UPGRADES iu
+            JOIN
+                $TABLE_PRESET_UPGRADES pu ON iu.$COLUMN_PRESET_UPGRADE_ID_FK = pu.$COLUMN_PRESET_UPGRADE_ID
+            WHERE
+                iu.$COLUMN_INSTANCE_HERO_ID_FK = ?
+        """
+
+        try {
+            cursor = db.rawQuery(query, arrayOf(heroId.toString()))
+            if (cursor.moveToFirst()) {
+                do {
+                    val instanceUpgrade = InstanceUpgrade(
+                        id = cursor.getInt(cursor.getColumnIndex(COLUMN_INSTANCE_UPGRADE_ID)),
+                        instanceCampaignId = cursor.getInt(cursor.getColumnIndex(COLUMN_INSTANCE_CAMPAIGN_ID_FK)),
+                        presetUpgradeId = cursor.getInt(cursor.getColumnIndex(COLUMN_PRESET_UPGRADE_ID_FK)),
+                        instanceHeroId = cursor.getInt(cursor.getColumnIndex(COLUMN_INSTANCE_HERO_ID_FK)),
+                        status = cursor.getString(cursor.getColumnIndex(COLUMN_INSTANCE_UPGRADE_STATUS)),
+                        name = cursor.getString(cursor.getColumnIndex(COLUMN_PRESET_UPGRADE_NAME)),
+                        isDisposable = cursor.getInt(cursor.getColumnIndex(COLUMN_PRESET_UPGRADE_IS_DISPOSABLE)) == 1
+                    )
+                    assignedUpgrades.add(instanceUpgrade)
+                } while (cursor.moveToNext())
+            }
+        } catch (e: Exception) {
+            Log.e("DB_ERROR", "Failed to get upgrades for heroId: $heroId", e)
+            e.printStackTrace()
+        } finally {
+            cursor?.close()
+        }
+        return assignedUpgrades
+    }
+
+
+    //delete campaigns
+    @RequiresApi(Build.VERSION_CODES.O)
+    fun deleteCampaignAndAllRelatedData(instanceCampaignId: Int) {
+        val db = this.writableDatabase
+        Log.d("DB_DELETE", "Starting deletion process for campaign ID: $instanceCampaignId")
+
+        // Use a transaction to ensure all deletions succeed or none do.
+        db.beginTransaction()
+        try {
+            // Step 1: Get all scenario IDs for the given campaign.
+            val scenarioIds = readScenariosForCampaign(instanceCampaignId).map { it.id }
+            Log.d("DB_DELETE", "Found scenarios to delete: $scenarioIds")
+
+            if (scenarioIds.isNotEmpty()) {
+                // Step 2: For each scenario, delete its questions from TABLE_INSTANCE_QUESTIONS.
+                // We create a string of placeholders (?,?,?) for the query.
+                val questionPlaceholders = scenarioIds.joinToString(separator = ", ") { "?" }
+                val questionsDeleted = db.delete(
+                    TABLE_INSTANCE_QUESTIONS,
+                    "$COLUMN_INSTANCE_SCENARIO_ID_FK IN ($questionPlaceholders)",
+                    scenarioIds.map { it.toString() }.toTypedArray()
+                )
+                Log.d("DB_DELETE", "Deleted $questionsDeleted questions for scenarios: $scenarioIds")
+
+                // Step 3: Delete all scenarios linked to the campaign from TABLE_INSTANCE_SCENARIOS.
+                val scenarioPlaceholders = scenarioIds.joinToString(separator = ", ") { "?" }
+                val scenariosDeleted = db.delete(
+                    TABLE_INSTANCE_SCENARIOS,
+                    "$COLUMN_INSTANCE_SCENARIO_ID IN ($scenarioPlaceholders)",
+                    scenarioIds.map { it.toString() }.toTypedArray()
+                )
+                Log.d("DB_DELETE", "Deleted $scenariosDeleted scenarios.")
+            }
+
+            // Step 4: Delete all upgrades linked to the campaign from TABLE_INSTANCE_UPGRADES.
+            // This can be done in one go using the campaign ID.
+            val upgradesDeleted = db.delete(
+                TABLE_INSTANCE_UPGRADES,
+                "$COLUMN_INSTANCE_CAMPAIGN_ID_FK_3 = ?", // Make sure this column name is correct for this table
+                arrayOf(instanceCampaignId.toString())
+            )
+            Log.d("DB_DELETE", "Deleted $upgradesDeleted upgrades for campaign.")
+
+            // Step 5: Delete all heroes linked to the campaign from TABLE_INSTANCE_HEROES.
+            val heroesDeleted = db.delete(
+                TABLE_INSTANCE_HEROES,
+                "$COLUMN_INSTANCE_CAMPAIGN_ID_FK = ?", // Make sure this column name is correct for this table
+                arrayOf(instanceCampaignId.toString())
+            )
+            Log.d("DB_DELETE", "Deleted $heroesDeleted heroes for campaign.")
+
+            // Step 6: Finally, delete the campaign itself from TABLE_INSTANCE_CAMPAIGNS.
+            val campaignsDeleted = db.delete(
+                TABLE_INSTANCE_CAMPAIGNS,
+                "$COLUMN_INSTANCE_CAMPAIGN_ID = ?",
+                arrayOf(instanceCampaignId.toString())
+            )
+            Log.d("DB_DELETE", "Deleted $campaignsDeleted campaign entry.")
+
+            // If all deletions were successful, mark the transaction as successful.
+            db.setTransactionSuccessful()
+            Log.d("DB_DELETE", "Transaction successful for campaign ID: $instanceCampaignId")
+
+        } catch (e: Exception) {
+            Log.e("DB_DELETE", "Error during campaign deletion transaction. Rolling back.", e)
+            e.printStackTrace()
+        } finally {
+            // End the transaction. If setTransactionSuccessful was not called, this will roll back the changes.
+            db.endTransaction()
+        }
     }
 
 }

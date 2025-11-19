@@ -2,7 +2,6 @@ package com.example.marvelchampionscampaigncompanion
 
 import Classes.*
 import DataBaseManager
-import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -135,7 +134,7 @@ fun RegisterScreen(modifier: Modifier = Modifier) {
                 dbManager.addUser(user)
 
                 //go back to main menu - TODO: make this only happen if the user has been created correctly
-                val intent = Intent(context, BetterMainActivity::class.java)
+                val intent = Intent(context, MainActivity::class.java)
                 context.startActivity(intent)
             },
             modifier = Modifier.fillMaxWidth()

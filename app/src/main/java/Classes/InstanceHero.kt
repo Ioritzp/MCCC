@@ -9,6 +9,7 @@ data class InstanceHero (
     var credits: Int,
     val name: String,
     var currentLife: Int,
+    val upgrades: List<InstanceUpgrade>,
     var modDate: LocalDateTime, //includes date and hour
 
 

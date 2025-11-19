@@ -3,192 +3,152 @@ package com.example.marvelchampionscampaigncompanion
 import DataBaseManager
 import Utils.Verifications
 import android.content.Intent
+import android.os.Build
 import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.annotation.RequiresApi
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
-import androidx.compose.material3.Button
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
+import androidx.compose.foundation.layout.*
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.TextFieldValue
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.activity.addCallback
-import androidx.compose.ui.text.input.PasswordVisualTransformation
-import androidx.compose.ui.text.style.TextAlign
 import com.example.marvelchampionscampaigncompanion.ui.theme.MarvelChampionsCampaignCompanionTheme
 
-
-class BetterMainActivity : ComponentActivity() {
-
+class MainActivity : ComponentActivity() {
+    @RequiresApi(Build.VERSION_CODES.O)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        onBackPressedDispatcher.addCallback(this) {
-            finish()
-        }
         enableEdgeToEdge()
         setContent {
             MarvelChampionsCampaignCompanionTheme {
-                LoginMenuCenteredInputScreen(modifier = Modifier.fillMaxSize())
-
+                // MainActivity now only shows the Login Screen.
+                LoginMenuCenteredInputScreen()
             }
         }
     }
+}
 
-    @Composable
-    fun LoginMenuCenteredInputScreen(
-        modifier: Modifier = Modifier,
+@Composable
+fun LoginMenuCenteredInputScreen(modifier: Modifier = Modifier) {
+    val context = LocalContext.current
+    var emailInput by remember { mutableStateOf(TextFieldValue("")) }
+    var passwordInput by remember { mutableStateOf(TextFieldValue("")) }
+
+    Column(
+        modifier = modifier
+            .fillMaxSize()
+            .padding(16.dp)
+            .background(Color.White),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Top
     ) {
-        var emailInput by remember { mutableStateOf(TextFieldValue("")) }
-        var passwordInput by remember { mutableStateOf(TextFieldValue("")) }
-        // Get the current context to use for starting a new activity
-        val context = LocalContext.current
+        // App Title
+        Text(
+            text = "Marvel Champions Campaign Companion",
+            style = MaterialTheme.typography.headlineMedium,
+            textAlign = TextAlign.Center,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 80.dp, bottom = 60.dp)
+        )
 
+        // Column for inputs and buttons
         Column(
-            modifier = modifier
-                .fillMaxSize()
-                .padding(16.dp)
-                .background(Color.White),
-            horizontalAlignment = Alignment.CenterHorizontally
+            modifier = Modifier.fillMaxWidth(0.9f),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
         ) {
-            Spacer(modifier = Modifier.height(50.dp))
-            Text(
-                text = "Marvel Champions Campaign Companion",
-                style = MaterialTheme.typography.headlineLarge,
-                textAlign = TextAlign.Center,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(bottom = 200.dp),
+            OutlinedTextField(
+                value = emailInput,
+                onValueChange = { emailInput = it },
+                label = { Text("Email Address") },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth()
             )
+            Spacer(modifier = Modifier.height(8.dp))
+            OutlinedTextField(
+                value = passwordInput,
+                onValueChange = { passwordInput = it },
+                label = { Text("Password") },
+                singleLine = true,
+                visualTransformation = PasswordVisualTransformation(),
+                modifier = Modifier.fillMaxWidth()
+            )
+            Spacer(modifier = Modifier.height(24.dp))
 
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth(0.8f),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Center
+            // Row for Login and Register buttons
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                OutlinedTextField(
-                    value = emailInput,
-                    onValueChange = { emailInput = it },
-                    label = { Text("Insert eMail") },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth()
-                )
-
-                Spacer(modifier = Modifier.height(8.dp))
-
-                OutlinedTextField(
-                    value = passwordInput,
-                    onValueChange = { passwordInput = it },
-                    label = { Text("Insert password") },
-                    singleLine = true,
-                    visualTransformation = PasswordVisualTransformation(),
-                    modifier = Modifier.fillMaxWidth()
-                )
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-
-                    Button(
-                        onClick = {
-                            val correctLogin = checkLogin(emailInput.text, passwordInput.text)
-
-                            if(correctLogin){
-                                val intent = Intent(context, SelectCampaign()::class.java)
-                                context.startActivity(intent)
-
-                            } else{
-                                Toast.makeText(context, "Incorrect login", Toast.LENGTH_SHORT).show()
-                            }
-                        },
-                        modifier = Modifier
-                            .weight(1f)
-                            .height(50.dp)
-                    ) {
-                        Text("Login")
-                    }
-                    Spacer(modifier = Modifier.width(16.dp))
-                    Button(
-                        onClick = {
-                            val intent = Intent(context, RegisterActivity()::class.java)
-                            context.startActivity(intent)
-
-                        },
-                        modifier = Modifier
-                            .weight(1f)
-                            .height(50.dp)
-                    ) {
-                        Text("Register")
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(16.dp))
-
+                // Login Button
                 Button(
                     onClick = {
-                        // Navigate to DBManager Activity -- TODO: THIS BUTTON MUST BE HIDDEN FOR ADMIN ACCOUNT ONLY IN FINAL VERSION
-                        val intent = Intent(context, DataAdminActivity()::class.java)
-                        context.startActivity(intent)
+                        val correctLogin = checkLogin(context, emailInput.text, passwordInput.text)
+                        if (correctLogin) {
+                            // *** MODIFIED: Use Intent to go to CampaignSelector Activity ***
+                            val intent = Intent(context, CampaignSelector::class.java)
+                            context.startActivity(intent)
+                        } else {
+                            Toast.makeText(context, "Incorrect login", Toast.LENGTH_SHORT).show()
+                        }
                     },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(50.dp)
+                    modifier = Modifier.weight(1f).height(50.dp)
                 ) {
-                    Text("Admin")
+                    Text("Login")
+                }
+
+                // Register Button
+                Button(
+                    onClick = {
+                        context.startActivity(Intent(context, RegisterActivity::class.java))
+                    },
+                    modifier = Modifier.weight(1f).height(50.dp)
+                ) {
+                    Text("Register")
                 }
             }
-        }
-    }
+            Spacer(modifier = Modifier.height(16.dp))
 
-    fun checkLogin(email: String, password: String): Boolean {
-        //TODO:according to gemini, ghis can be simplified with the "find" method. Try both and comment the least efficient.
-       var db = DataBaseManager(this)
-        var isRegistered = false
-        var checkedPassword = false
-        val users = db.readUsers()
-        for (user in users){
-            checkedPassword = Verifications.checkPassword(password, user.password)
-            if (user.email == email && checkedPassword){
-                isRegistered = true
-                break
-
+            // Admin Button
+            Button(
+                onClick = {
+                    context.startActivity(Intent(context, DataAdminActivity::class.java))
+                },
+                modifier = Modifier.fillMaxWidth().height(50.dp)
+            ) {
+                Text("Admin")
             }
         }
-         return isRegistered
     }
+}
 
+// Helper function remains the same
+fun checkLogin(context: android.content.Context, email: String, password: String): Boolean {
+    val db = DataBaseManager(context)
+    val users = db.readUsers()
+    return users.any { user ->
+        user.email == email && Verifications.checkPassword(password, user.password)
+    }
+}
 
-    @Preview(showBackground = true, showSystemUi = true)
-    @Composable
-    fun LoginMenuCenteredInputScreenPreview() {
-        MarvelChampionsCampaignCompanionTheme {
-            LoginMenuCenteredInputScreen(modifier = Modifier.fillMaxSize())
-        }
+@Preview(showBackground = true, showSystemUi = true)
+@Composable
+fun LoginMenuCenteredInputScreenPreview() {
+    MarvelChampionsCampaignCompanionTheme {
+        LoginMenuCenteredInputScreen()
     }
 }
