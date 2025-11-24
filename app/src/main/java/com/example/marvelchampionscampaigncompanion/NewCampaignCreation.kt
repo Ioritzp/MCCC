@@ -48,11 +48,24 @@ import androidx.compose.ui.window.Dialog
 import com.example.marvelchampionscampaigncompanion.ui.theme.MarvelChampionsCampaignCompanionTheme
 import java.time.LocalDateTime
 import kotlin.Int
+import android.annotation.SuppressLint
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.GridItemSpan
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.ui.graphics.ColorFilter
 
 // Data class to represent the structure of a campaign shown in the UI
 data class CampaignBlueprint(
     val id: String,
     val name: String,
+    val userId: Int,
     @DrawableRes val imageRes: Int? // Use a drawable resource ID for the image
 )
 
@@ -61,9 +74,10 @@ class NewCampaignCreation : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        val userId = intent.getIntExtra("USER_ID", -1)
         setContent {
             MarvelChampionsCampaignCompanionTheme {
-                NewCampaignCreationRoute()
+                NewCampaignCreationRoute(userId = userId)
             }
         }
     }
@@ -76,12 +90,10 @@ fun NewCampaignCreationScreen(
     availableCampaigns:List<CampaignBlueprint>,
     presetCampaignsInfo: List<Campaign>,
     allPresetHeroes: List<Hero>,
+    userId:Int,
     modifier: Modifier = Modifier) {
     val context = LocalContext.current
-    val dbManager = remember { DataBaseManager(context) }
     val activity = LocalActivity.current
-
-
     // State management for dialogs
     var showPlayerCountDialog by remember { mutableStateOf(false) }
     var showDifficultyDialog by remember { mutableStateOf(false) }
@@ -143,6 +155,7 @@ fun NewCampaignCreationScreen(
                     numberOfPlayers,
                     difficulty,
                     selectedHeroes,
+                    userId,
                     selectedCampaignInfo
                 )
             } else{
@@ -156,39 +169,62 @@ fun NewCampaignCreationScreen(
 
     Scaffold(
         modifier = modifier.fillMaxSize(),
-        topBar = {
-            TopAppBar(
-                title = {
-                    Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-                        Text("select campaign")
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = Color(0xFFFFF9C4), // Yellow background for the title area
-                    titleContentColor = Color.Black
-                )
-            )
-        },
-        containerColor = Color(0xFFFFE0B2) // Light Orange background
     ) { innerPadding ->
-        LazyColumn(
+        Box(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(innerPadding),
-            contentPadding = PaddingValues(vertical = 8.dp)
+                .padding(innerPadding)
         ) {
-            items(
-                items = availableCampaigns,
-                key = { campaign -> campaign.id }
-            ) { campaign ->
-                CampaignButton(
-                    blueprint = campaign,
-                    onClick = {
-                        // Start the dialog chain by setting the state
-                        selectedCampaignId = campaign.id.toInt()
-                        showPlayerCountDialog = true
-                    }
+            Image(
+                painter = painterResource(id = R.drawable.soft_background),
+                contentDescription = "Background",
+                modifier = Modifier.fillMaxSize(),
+                contentScale = ContentScale.Crop,
+                colorFilter = ColorFilter.tint(
+                    Color.Black.copy(alpha = 0.2f),
+                    blendMode = androidx.compose.ui.graphics.BlendMode.Darken
                 )
+            )
+            Column(
+                modifier = Modifier.fillMaxSize(),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Image(
+                    painter = painterResource(id = R.drawable.main_logo),
+                    contentDescription = "Logo",
+                    modifier = Modifier
+                        .fillMaxWidth(0.8f) // Takes 80% of the screen width
+                        .padding(top = 16.dp)
+                )
+
+                Text(
+                    //TODO: change the typography
+                    text = "Create Campaign",
+                    style = MaterialTheme.typography.headlineMedium,
+                    color = Color.White,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(vertical = 8.dp)
+                )
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(innerPadding),
+                    contentPadding = PaddingValues(vertical = 8.dp)
+                ) {
+                    items(
+                        items = availableCampaigns,
+                        key = { campaign -> campaign.id }
+                    ) { campaign ->
+                        CampaignButton(
+                            blueprint = campaign,
+                            onClick = {
+                                // Start the dialog chain by setting the state
+                                selectedCampaignId = campaign.id.toInt()
+                                showPlayerCountDialog = true
+                            }
+                        )
+                    }
+                }
             }
         }
     }
@@ -199,12 +235,20 @@ fun NewCampaignCreationScreen(
  */
 @Composable
 fun CampaignButton(blueprint: CampaignBlueprint, onClick: () -> Unit) {
+    val color1 = when (blueprint.name) {
+        "Rise of Red Skull" -> Color(0xFF962626)
+        "Galaxy's Most Wanted" -> Color(0xFF211CAD)
+        "The Mad Titan's Shadow" -> Color(0xFFC2973C)
+        else -> MaterialTheme.colorScheme.surfaceVariant // Default fallback colors
+    }
     Card(
         modifier = Modifier
             .fillMaxWidth()
             .padding(vertical = 6.dp, horizontal = 12.dp)
             .clickable(onClick = onClick), // Makes the entire card clickable
-        elevation = CardDefaults.cardElevation(defaultElevation = 3.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 3.dp),
+        colors = CardDefaults.cardColors(containerColor = color1),
+        border = BorderStroke(2.dp, Color.Black)
     ) {
         Row(
             modifier = Modifier.padding(16.dp),
@@ -217,7 +261,8 @@ fun CampaignButton(blueprint: CampaignBlueprint, onClick: () -> Unit) {
                     contentScale = ContentScale.Crop,
                     modifier = Modifier
                         .size(80.dp)
-                        .clip(MaterialTheme.shapes.medium)
+                        .clip(CircleShape)
+                        .border(2.dp, Color.White.copy(alpha = 0.7f), CircleShape)
                 )
             } ?: Box(
                 modifier = Modifier
@@ -239,7 +284,7 @@ fun CampaignButton(blueprint: CampaignBlueprint, onClick: () -> Unit) {
 
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
-fun NewCampaignCreationRoute() {
+fun NewCampaignCreationRoute(userId: Int) {
     val context = LocalContext.current
     val dbManager = remember { DataBaseManager(context) }
     val campaignsFromDb = remember { dbManager.getAllPresetCampaigns() }
@@ -257,13 +302,15 @@ fun NewCampaignCreationRoute() {
             CampaignBlueprint(
                 id = campaign.id.toString(),
                 name = campaign.name,
+                userId = userId,
                 imageRes = imageResource
             )
         }
     }
     NewCampaignCreationScreen(availableCampaigns = availableCampaigns,
         presetCampaignsInfo = campaignsFromDb,
-        allPresetHeroes = allPresetHeroesFromDb)
+        allPresetHeroes = allPresetHeroesFromDb,
+        userId = userId)
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -275,10 +322,11 @@ fun PlayerCountDialog(onDismiss: () -> Unit, onConfirm: (Int) -> Unit) {
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Select Player Count") },
+        containerColor = Color.White,
+        title = { Text("Select Player Count", color = Color.Black) },
         text = {
             Column {
-                Text("How many players will there be?")
+                Text("Select number of players:", color = Color.Black)
                 Spacer(Modifier.height(16.dp))
                 ExposedDropdownMenuBox(
                     expanded = expanded,
@@ -289,16 +337,28 @@ fun PlayerCountDialog(onDismiss: () -> Unit, onConfirm: (Int) -> Unit) {
                         onValueChange = {},
                         readOnly = true,
                         trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
-                        modifier = Modifier.menuAnchor()
+                        modifier = Modifier.menuAnchor(MenuAnchorType.PrimaryEditable, true),
+                        colors = TextFieldDefaults.colors(
+                            unfocusedTextColor = Color.Black,
+                            focusedTextColor = Color.Black,
+                            unfocusedContainerColor = Color.White,
+                            focusedContainerColor = Color.White
+                        )
                     )
-                    ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+                    ExposedDropdownMenu(
+                        expanded = expanded,
+                        modifier = Modifier.background(Color.White),
+                        onDismissRequest = { expanded = false }) {
                         playerCounts.forEach { count ->
                             DropdownMenuItem(
                                 text = { Text(count) },
                                 onClick = {
                                     selectedPlayerCount = count
                                     expanded = false
-                                }
+                                },
+                                colors = MenuDefaults.itemColors(
+                                    textColor = Color.Black
+                                )
                             )
                         }
                     }
@@ -306,12 +366,24 @@ fun PlayerCountDialog(onDismiss: () -> Unit, onConfirm: (Int) -> Unit) {
             }
         },
         confirmButton = {
-            Button(onClick = { onConfirm(selectedPlayerCount.toInt()) }) {
+            Button(onClick = { onConfirm(selectedPlayerCount.toInt()) },
+                shape = RoundedCornerShape(0.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = Color(0xFFED1D24),
+                    contentColor = Color.White
+                ),
+
+            ) {
                 Text("Confirm")
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) {
+            TextButton(onClick = onDismiss,
+                shape = RoundedCornerShape(0.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = Color(0xFFED1D24),
+                    contentColor = Color.White
+                )) {
                 Text("Cancel")
             }
         }
@@ -331,26 +403,37 @@ fun SelectHeroesDialog(
                 .fillMaxWidth()
                 .padding(16.dp),
             shape = MaterialTheme.shapes.medium,
-            tonalElevation = 8.dp
+            tonalElevation = 8.dp,
+            color = Color.White
         ){
             Column(modifier = Modifier.padding(16.dp)) {
                 Text(
                     text = "Select Hero for Player $playerNumber",
-                    style = MaterialTheme.typography.titleLarge
+                    style = MaterialTheme.typography.titleLarge,
+                    color = Color.Black
                 )
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                LazyColumn (modifier = Modifier.weight(1f, fill = false)){
-                    if(heroList.isEmpty()){
-                        item{
+                Spacer(modifier = Modifier.height(16.dp))
+
+                LazyVerticalGrid(
+                    columns = GridCells.Fixed(2),
+                    modifier = Modifier.weight(1f, fill = false),
+                    horizontalArrangement = Arrangement.spacedBy(16.dp), // Add some space between columns
+                    verticalArrangement = Arrangement.spacedBy(12.dp) // Add some space between rows
+                ) {
+                    if (heroList.isEmpty()) {
+                        item(span = { GridItemSpan(maxLineSpan) }) { // Make the "empty" text span both columns
                             Text(
                                 "No more heroes available.",
-                                modifier = Modifier.padding(vertical = 16.dp)
+                                modifier = Modifier.padding(vertical = 16.dp),
+                                color = Color.Black
                             )
                         }
                     } else {
-                        items(heroList, key = { it.id }){ hero ->
+                        items(heroList, key = { it.id }) { hero ->
+                            // The HeroRow composable is reused without any changes needed
                             HeroRow(hero = hero, onHeroSelected = {
                                 onConfirm(hero)
                             })
@@ -362,7 +445,12 @@ fun SelectHeroesDialog(
 
                 TextButton(
                     onClick = onDismiss,
-                    modifier = Modifier.align(Alignment.End)
+                    modifier = Modifier.align(Alignment.End),
+                    colors = ButtonDefaults.buttonColors(
+                            containerColor = Color(0xFFED1D24),
+                            contentColor = Color.Black
+                        )
+
                 ) {
                     Text("CANCEL")
                 }
@@ -371,23 +459,61 @@ fun SelectHeroesDialog(
     }
 }
 
+@SuppressLint("DiscouragedApi", "LocalContextResourcesRead")
 @Composable
 fun HeroRow(hero: Hero, onHeroSelected: () -> Unit) {
-    Card(
+
+    Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 4.dp)
-            .clickable { onHeroSelected() },
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+            .clickable { onHeroSelected() }
+            .padding(vertical = 8.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Row(
-            modifier = Modifier.padding(12.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(text = hero.name, style = MaterialTheme.typography.bodyLarge)
+        val context = LocalContext.current
+        val resourceName = "h${hero.id}"
+        val resourceId = remember(resourceName) {
+            context.resources.getIdentifier(
+                resourceName,
+                "drawable",
+                context.packageName
+            )
         }
+
+        Image(
+            painter = if (resourceId != 0) {
+                painterResource(id = resourceId)
+            } else {
+                painterResource(id = R.drawable.ic_launcher_background)
+            },
+            contentDescription = hero.name,
+            contentScale = ContentScale.Crop,
+            modifier = Modifier
+                .size(200.dp)
+                .clip(RoundedCornerShape(2.dp))
+        )
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        Text(
+            text = hero.name,
+            style = MaterialTheme.typography.titleMedium, // A slightly larger style
+            fontWeight = FontWeight.Bold,
+            color = Color.Black
+        )
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        // Small divider line between heroes
+        HorizontalDivider(
+            modifier = Modifier
+                .fillMaxWidth(0.8f), // Make the divider not span the full width
+            thickness = 1.dp,
+            color = Color.Gray.copy(alpha = 0.5f)
+        )
     }
 }
+
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -398,13 +524,15 @@ fun DifficultyDialog(onDismiss: () -> Unit, onConfirm: (String) -> Unit) {
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Select Difficulty") },
+        containerColor = Color.White,
+        title = { Text("Select Difficulty", color = Color.Black) },
         text = {
             Column {
-                Text("Choose the campaign difficulty.")
+                Text("Choose the campaign difficulty.", color = Color.Black)
                 Spacer(Modifier.height(16.dp))
                 ExposedDropdownMenuBox(
                     expanded = expanded,
+                    modifier = Modifier.background(color = Color.White),
                     onExpandedChange = { expanded = !expanded }
                 ) {
                     TextField(
@@ -412,16 +540,29 @@ fun DifficultyDialog(onDismiss: () -> Unit, onConfirm: (String) -> Unit) {
                         onValueChange = {},
                         readOnly = true,
                         trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
-                        modifier = Modifier.menuAnchor()
+                        modifier = Modifier.menuAnchor(MenuAnchorType.PrimaryEditable, true).background(color = Color.White),
+                        colors = TextFieldDefaults.colors(
+                            unfocusedTextColor = Color.Black,
+                            focusedTextColor = Color.Black,
+                            unfocusedContainerColor = Color.White,
+                            focusedContainerColor = Color.White
+
+                        )
                     )
-                    ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+                    ExposedDropdownMenu(
+                        expanded = expanded,
+                        modifier = Modifier.background(Color.White),
+                        onDismissRequest = { expanded = false }) {
                         difficulties.forEach { difficulty ->
                             DropdownMenuItem(
                                 text = { Text(difficulty) },
                                 onClick = {
                                     selectedDifficulty = difficulty
                                     expanded = false
-                                }
+                                },
+                                colors = MenuDefaults.itemColors(
+                                    textColor = Color.Black
+                                )
                             )
                         }
                     }
@@ -429,15 +570,33 @@ fun DifficultyDialog(onDismiss: () -> Unit, onConfirm: (String) -> Unit) {
             }
         },
         confirmButton = {
-            Button(onClick = { onConfirm(selectedDifficulty) }) {
-                Text("Next")
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Button(
+                    onClick = onDismiss,
+                    shape = RoundedCornerShape(0.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Color(0xFFED1D24),
+                        contentColor = Color.White
+                    )
+                ) {
+                    Text("Cancel")
+                }
+                Button(
+                    onClick = { onConfirm(selectedDifficulty) },
+                    shape = RoundedCornerShape(0.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Color(0xFFED1D24),
+                        contentColor = Color.White
+                    )
+                ) {
+                    Text("Next")
+                }
             }
         },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text("Cancel")
-            }
-        }
+        dismissButton = {}
     )
 }
 
@@ -448,6 +607,7 @@ fun createInstancedCampaign(
     playerCount: Int,
     difficulty: String,
     heroes: List<Hero>,
+    userId: Int,
     selectedCampaignInfo: Campaign?
 ) {
     val context = activity?.applicationContext
@@ -456,7 +616,7 @@ fun createInstancedCampaign(
         return
     }
     val dbManager = DataBaseManager(context)
-    val userId = 1 // Placeholder
+
 
     // --- STEP 1: Create the Campaign shell first to get its real ID ---
     val newInstancedCampaign = InstanceCampaign(
@@ -469,13 +629,12 @@ fun createInstancedCampaign(
         userName = "", // Placeholder
         playerNum = playerCount,
         startDate = LocalDateTime.now(),
-        endDate = LocalDateTime.now(),
+        endDate = null,
         difficulty = difficulty
     )
+
     // Add the campaign to the DB to get its REAL ID
     val finalCampaignId = dbManager.addCampaign(newInstancedCampaign).toInt()
-    Toast.makeText(context, "${newInstancedCampaign.name} has been created!", Toast.LENGTH_SHORT).show()
-    Log.d("DEBUG_QUESTIONS_SCENARIO", "scenario list size: ${selectedCampaignInfo.scenarioList[0].questionList.size}")
 
     // --- STEP 2: Now create Scenarios and Questions using the final campaign ID ---
     for ((index, presetScenario) in selectedCampaignInfo.scenarioList.withIndex()) {
@@ -491,13 +650,12 @@ fun createInstancedCampaign(
             description = presetScenario.description,
             questionList = arrayListOf(),
             startDate = LocalDateTime.now(),
-            endDate = LocalDateTime.now(),
+            endDate = null,
             status = scenarioStatus
         )
         // Add the scenario to the DB to get its real ID
+
         val finalScenarioId = dbManager.addScenario(instancedScenario).toInt()
-        Log.d("DEBUG_QUESTIONLIST_ON_CAMPAIGN_CREATION", "question list: ${presetScenario.questionList.size}")
-        Log.d("DEBUG_QUESTIONLIST_ON_CAMPAIGN_CREATION", "question list: ${presetScenario.questionList.size}")
         // Now create questions, linking them to the real scenario ID
         for (presetQuestion in presetScenario.questionList) {
             val instancedQuestion = InstanceMarvelQuestion(
@@ -525,21 +683,12 @@ fun createInstancedCampaign(
             modDate = LocalDateTime.now()
         )
         dbManager.addHero(instancedHero)
-        Toast.makeText(context, "${instancedHero.name} has been added!", Toast.LENGTH_SHORT).show()
     }
 
     // --- Finalize and finish the activity ---
-    Toast.makeText(context, "${newInstancedCampaign.name} campaign fully configured!", Toast.LENGTH_LONG).show()
     activity?.setResult(Activity.RESULT_OK)
     activity?.finish()
 }
-
-
-
-    //TODO: MAYBE UPGRADES TOO, BUT NOT YET
-
-
-
 
 @RequiresApi(Build.VERSION_CODES.O)
 @Preview(showBackground = true, showSystemUi = true)
@@ -548,9 +697,9 @@ fun NewCampaignCreationScreenPreview() {
     MarvelChampionsCampaignCompanionTheme {
         // Dummy data for the CampaignBlueprint list (for the UI cards)
         val sampleCampaignBlueprints = listOf(
-            CampaignBlueprint("1", "The Rise of Red Skull", R.drawable.red_skull),
-            CampaignBlueprint("2", "Galaxy's Most Wanted", R.drawable.most_wanted),
-            CampaignBlueprint("3", "The Mad Titan's Shadow", null)
+            CampaignBlueprint("1", "The Rise of Red Skull",1, R.drawable.red_skull),
+            CampaignBlueprint("2", "Galaxy's Most Wanted",1, R.drawable.most_wanted),
+            CampaignBlueprint("3", "The Mad Titan's Shadow",1, null)
         )
 
         // Dummy data for the Campaign list (the detailed info)
@@ -568,7 +717,7 @@ fun NewCampaignCreationScreenPreview() {
                 listOf(Scenario(2, "dummy2", "dummy2", "dummy2", listOf(MarvelQuestion(2, "q2", "a2", "type"))))
             ),
             Campaign(
-                3, // <--- FIX: ADD THE COMMA HERE
+                3,
                 "The Mad Titan's Shadow",
                 "Thanos is coming...",
                 listOf(Scenario(3, "dummy3", "dummy3", "dummy3", listOf(MarvelQuestion(3, "q3", "a3", "type"))))
@@ -585,6 +734,7 @@ fun NewCampaignCreationScreenPreview() {
         NewCampaignCreationScreen(
             availableCampaigns = sampleCampaignBlueprints,
             presetCampaignsInfo = sampleCampaignsInfo,
+            userId = 1,
             allPresetHeroes = sampleHeroes // <-- PASS THE FAKE HEROES
         )
     }

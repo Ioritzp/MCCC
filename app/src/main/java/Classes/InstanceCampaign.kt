@@ -12,7 +12,7 @@ data class InstanceCampaign (
     var userName: String,
     var playerNum: Int,
     var startDate: LocalDateTime,
-    var endDate: LocalDateTime,
+    var endDate: LocalDateTime?,
     var difficulty: String
 
 

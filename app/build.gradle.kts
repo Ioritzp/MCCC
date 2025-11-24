@@ -52,6 +52,7 @@ dependencies {
     implementation(platform("androidx.compose:compose-bom:2024.06.00"))
     implementation("com.readystatesoftware.sqliteasset:sqliteassethelper:2.0.1")
     implementation("org.mindrot:jbcrypt:0.4")
+    implementation("androidx.compose.material:material-icons-extended-android:1.7.8")
     implementation(libs.androidx.navigation.compose)
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)

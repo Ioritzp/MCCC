@@ -13,8 +13,8 @@ data class InstanceScenario (
     val villainName: String,
     val description: String,
     var questionList: List<InstanceMarvelQuestion>,
-    var startDate: LocalDateTime,
-    var endDate: LocalDateTime,
+    var startDate: LocalDateTime?,
+    var endDate: LocalDateTime?,
     var status: String
 
 ) : Serializable
