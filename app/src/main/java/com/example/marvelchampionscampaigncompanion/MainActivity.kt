@@ -2,6 +2,7 @@ package com.example.marvelchampionscampaigncompanion
 
 import Classes.User
 import DataBaseManager
+import Utils.SessionManager
 import Utils.Verifications
 import android.content.Intent
 import android.os.Build
@@ -162,6 +163,8 @@ fun LoginMenuCenteredInputScreen(modifier: Modifier = Modifier) {
                     onClick = {
                         val loggedinUser = checkLogin(context, emailInput.text, passwordInput.text)
                         if (loggedinUser != null) {
+                            val sessionManager = SessionManager(context)
+                            sessionManager.saveUserId(loggedinUser.id)
                             val intent = Intent(context, CampaignSelector::class.java).apply{
                                 putExtra("USER_ID", loggedinUser.id)
                             }

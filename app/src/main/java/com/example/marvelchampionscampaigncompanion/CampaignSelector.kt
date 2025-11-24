@@ -17,6 +17,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import Classes.InstanceCampaign
 import DataBaseManager
+import Utils.SessionManager
 import android.content.Context
 import android.util.Log
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -187,9 +188,12 @@ private fun CampaignSelectorRoute(userId: Int) {
         onUserMenuClick = {showUserMenu = !showUserMenu},
         onDismissUserMenu = {showUserMenu = false},
         onCloseSession = {
+            val sessionManager = SessionManager(context)
+            sessionManager.clearSession()
             val intent = Intent(context, MainActivity::class.java).apply {
                 flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
             }
+
             context.startActivity(intent)
         },
         onDeleteUser = {

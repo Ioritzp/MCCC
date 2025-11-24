@@ -7,11 +7,14 @@ import Classes.InstanceUpgrade
 import Classes.QuestionType
 import Classes.Upgrade
 import DataBaseManager
+import Utils.SessionManager
 import android.annotation.SuppressLint
 import android.app.Activity
+import android.content.Intent
 import android.os.Build
 import android.os.Bundle
 import android.util.Log
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -69,6 +72,21 @@ class ScenarioScreen : ComponentActivity() {
         val isLastScenario = intent.getBooleanExtra("IS_LAST_SCENARIO", false)
         val campaignDifficulty = intent.getStringExtra("CAMPAIGN_DIFFICULTY")
 
+        val sessionManager = SessionManager(this)
+        val userId = sessionManager.getUserId()
+
+        if(userId == null){
+            Toast.makeText(this, "Session expired, please log in again.", Toast.LENGTH_LONG).show()
+            val intent = Intent(this, MainActivity::class.java).apply{
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+
+            }
+            startActivity(intent)
+            finish()
+            return
+        }
+
+
         setContent {
             MarvelChampionsCampaignCompanionTheme {
                 if (scenarioId != -1 && campaignId != -1) {
@@ -76,7 +94,8 @@ class ScenarioScreen : ComponentActivity() {
                         scenarioId = scenarioId,
                         campaignId = campaignId,
                         isLastScenario = isLastScenario,
-                        difficulty = campaignDifficulty
+                        difficulty = campaignDifficulty,
+                        userId = userId
                     )
                 } else {
                     // A fallback screen in case the IDs are not passed correctly
@@ -98,7 +117,7 @@ private data class ScenarioScreenData(
 
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
-fun ScenarioRoute(scenarioId: Int, campaignId: Int, isLastScenario: Boolean, difficulty: String?) {
+fun ScenarioRoute(scenarioId: Int, campaignId: Int, isLastScenario: Boolean, difficulty: String?, userId: Int) {
     val context = LocalContext.current
     val dbManager = remember { DataBaseManager(context) }
 
@@ -144,10 +163,20 @@ fun ScenarioRoute(scenarioId: Int, campaignId: Int, isLastScenario: Boolean, dif
     // This will navigate back when the flow is totally finished.
     LaunchedEffect(isCompletionFinished) {
         if (isCompletionFinished) {
+            val activity = context as? Activity
             // Let the previous screen know we succeeded.
-            (context as? Activity)?.setResult(Activity.RESULT_OK)
+            activity?.setResult(Activity.RESULT_OK)
             // Finish this activity.
-            (context as? Activity)?.finish()
+            if(isLastScenario){
+                val intent = Intent(context, CampaignSelector::class.java).apply{
+                    //This flag clears the nav stack, so the user cant go back to a completed campaign
+                    flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+                    putExtra("USER_ID", userId)
+                }
+                context.startActivity(intent)
+            } else {
+                activity?.finish()
+            }
         }
     }
 
