@@ -325,7 +325,6 @@ fun ScenarioRoute(scenarioId: Int, campaignId: Int, isLastScenario: Boolean, dif
             )
         }
 
-        // 3. Upgrade Selection Dialog
         if (showUpgradeDialog && currentData.heroes.isNotEmpty()) {
             val currentHeroForUpgrade = currentData.heroes[currentHeroUpgradeIndex]
             UpgradeSelectionDialog(
@@ -449,8 +448,9 @@ fun ScenarioScreenContent(
                                     color = Color.Black
                                 )
                                 Spacer(Modifier.height(4.dp))
+                                Log.d("QUESTIONS_LOG", "question list size:" +pastScenario.questionList.size)
                                 pastScenario.questionList
-                                    .filter { !it.answer.isNullOrBlank() }
+                                    .filter { it.answer.isNotBlank() }
                                     .forEach { question ->
                                         Text(
                                             text = "• ${question.text}: ${question.answer}",

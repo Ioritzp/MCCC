@@ -73,7 +73,6 @@ class RegisterActivity : ComponentActivity() {
     }
 }
 
-//TODO: ALL DATA VERIFICATION HAS TO BE DONE ON IT'S CLASS AND CALL IT ACORDINGLY
 @Composable
 fun RegisterScreen(modifier: Modifier = Modifier) {
     // State variables remain the same
@@ -278,7 +277,7 @@ fun RegisterScreen(modifier: Modifier = Modifier) {
                             // Localized description for accessibility services
                             val description = if (repeatPasswordVisible) "Hide password" else "Show password"
 
-                            IconButton(onClick = { passwordVisible = !passwordVisible }) {
+                            IconButton(onClick = { repeatPasswordVisible = !repeatPasswordVisible }) {
                                 Icon(imageVector = eyeImage, description)
                             }
                         }

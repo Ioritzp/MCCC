@@ -562,7 +562,7 @@ fun InstancedCampaignButton(
                 }
             }
 
-            /*if(campaign.endDate !=null){
+            if(campaign.endDate !=null){
                 Icon(
                     imageVector = Icons.Filled.CheckCircle,
                     contentDescription = "Campaign Completed",
@@ -571,7 +571,7 @@ fun InstancedCampaignButton(
                         .padding(start = 8.dp)
                         .size(24.dp)
                 )
-            }*/
+            }
 
             // --- Delete Mode Checkbox ---
             if (isDeleteMode) {
