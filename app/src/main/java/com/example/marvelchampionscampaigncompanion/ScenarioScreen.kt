@@ -53,11 +53,13 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.toLowerCase
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.marvelchampionscampaigncompanion.ui.theme.MarvelChampionsCampaignCompanionTheme
 import java.time.LocalDateTime
+import java.util.Locale
 import kotlin.text.lowercase
 
 @RequiresApi(Build.VERSION_CODES.O)
@@ -187,17 +189,23 @@ fun ScenarioRoute(scenarioId: Int, campaignId: Int, isLastScenario: Boolean, dif
             CircularProgressIndicator()
         }
     } else {
-        fun completeScenarioFlow() {
-            dbManager.updateScenarioStatus(currentData.scenario.id, "completed", setEndDate = true)
+        fun completeScenarioFlow(isEditing: Boolean) {
+            if (!isEditing){
+                dbManager.updateScenarioStatus(
+                    currentData.scenario.id,
+                    "completed",
+                    setEndDate = true
+                )
             val allScenarios = dbManager.readScenariosForCampaign(campaignId)
-            val endDateCheck = allScenarios.find{scenario -> scenario.id == currentData.scenario.id}
+            val endDateCheck =
+                allScenarios.find { scenario -> scenario.id == currentData.scenario.id }
             Log.d("DEBUG_ALL_SCENARIOS", "Actual scenario end date: ${endDateCheck?.endDate}")
             val currentIndex = allScenarios.indexOfFirst { it.id == currentData.scenario.id }
             Log.d("DEBUG_UPLOAD DATE", "islastscenario check: $isLastScenario}")
-            if(!isLastScenario){
+            if (!isLastScenario) {
                 val nextScenario = allScenarios[currentIndex + 1]
                 dbManager.updateScenarioStatus(nextScenario.id, "current", false)
-            }else{
+            } else {
                 val campaignToComplete = dbManager.getCampaignById(campaignId)
                 Log.d("DEBUG_UPLOAD DATE", "campaingtocomplete ok: ${campaignToComplete?.name}")
                 campaignToComplete?.let {
@@ -206,13 +214,18 @@ fun ScenarioRoute(scenarioId: Int, campaignId: Int, isLastScenario: Boolean, dif
                     dbManager.updateCampaign(finalCampaign)
                 }
             }
+        }
             isCompletionFinished = true
         }
 
         // Called after questions are answered (or if there are none).
-        fun startUpgradeSelection() {
+        fun startUpgradeSelection(isEditing: Boolean) {
             if(isLastScenario){
-                completeScenarioFlow()
+                if(isEditing){
+                    isCompletionFinished = true
+                }else {
+                    completeScenarioFlow(isEditing = false)
+                }
                 return
             }
             val presetCampaignId = dbManager.getPresetCampaignIdByInstanceId(campaignId)
@@ -221,7 +234,7 @@ fun ScenarioRoute(scenarioId: Int, campaignId: Int, isLastScenario: Boolean, dif
 
             // If there are no upgrades to select, just complete the flow.
             if (availableUpgrades.isEmpty()) {
-                completeScenarioFlow()
+                completeScenarioFlow(isEditing)
             } else {
                 currentHeroUpgradeIndex = 0 // Start with the first hero
                 showUpgradeDialog = true
@@ -229,46 +242,59 @@ fun ScenarioRoute(scenarioId: Int, campaignId: Int, isLastScenario: Boolean, dif
         }
 
         // Called after the life update dialog is confirmed.
-        fun continueAfterLifeUpdate() {
-            // 1. Fetch preset questions for this scenario.
-            Log.d("DEBUG_QUESTIONS", "FETCHING QUESTIONS FOR SCENARIO")
+        fun continueAfterLifeUpdate(isEditing: Boolean) {
+            // Fetch preset questions for this scenario.
             val presetQuestions = dbManager.readQuestionsForScenario(currentData.scenario.id)
-            Log.d("DEBUG_QUESTIONS", "question lsit for scenariopreset: ${currentData.scenario.presetScenarioId} " +
-                    "$presetQuestions")
-            // 2. Create InstanceMarvelQuestion objects.
-            val instanceQuestions = presetQuestions.map {
+            val existingAnswers = dbManager.readQuestionsForScenario(currentData.scenario.id)
+            val instanceQuestions = presetQuestions.map {presetQuestion ->
+                val existingAnswer = existingAnswers.find { it.presetQuestionId == presetQuestion.id }
                 InstanceMarvelQuestion(
-                    id = 0, // 0 since it's not in the DB yet.
+                    id = existingAnswer?.id ?:0,
                     instanceScenarioId = currentData.scenario.id,
-                    presetQuestionId = it.id,
-                    text = it.text,
-                    questionType = it.questionType,
-                    answer = "" // Initially no answer
+                    presetQuestionId = presetQuestion.id,
+                    text = presetQuestion.text,
+                    questionType = presetQuestion.questionType,
+                    answer = existingAnswer?.answer ?:""
                 )
             }
             questionsToAsk = instanceQuestions
+
+            Log.d("EDITQUESTIONS_DEBUG", "questions edited:" + questionsToAsk)
 
             // 3. If there are questions, show the first one. Otherwise, start upgrade selection.
             if (questionsToAsk.isNotEmpty()) {
                 currentQuestion = questionsToAsk.first()
             } else {
-                startUpgradeSelection()
+                startUpgradeSelection(isEditing)
             }
         }
 
         // This is the entry point, called when the main button is clicked.
         fun startCompletionProcess() {
+            val isEditing = currentData.scenario.status.toLowerCase() == "completed"
+            if(isLastScenario && isEditing){
+                return
+            }
+            if(isEditing){
+
+                for (hero in currentData.heroes){
+                    dbManager.deleteUpgradesFromHeroByScenario(hero.id, currentData.scenario.id)
+                }
+            }
             if (difficulty == "Expert") {
                 showUpdateLifeDialog = true
             } else {
-                continueAfterLifeUpdate() // Skip the life update step
+                continueAfterLifeUpdate(isEditing) // Skip the life update step
             }
         }
         ScenarioScreenContent(
             scenario = currentData.scenario,
             heroes = currentData.heroes,
             campaignLog = currentData.campaignLog,
-            onCompleteClick = {startCompletionProcess() }
+            onCompleteClick = {startCompletionProcess() },
+            isCompleted = currentData.scenario.status.toLowerCase() == "completed",
+            isLastScenario = isLastScenario
+
         )
 
 
@@ -285,6 +311,7 @@ fun ScenarioRoute(scenarioId: Int, campaignId: Int, isLastScenario: Boolean, dif
                     }
                 },
                 onConfirm = {
+                    val isEditing = currentData.scenario.status.toLowerCase() == "completed"
                     // Save new life totals to the database
                     currentData.heroes.forEach { hero ->
                         updatedLifeTotals[hero.id]?.toIntOrNull()?.let { newLife ->
@@ -292,7 +319,7 @@ fun ScenarioRoute(scenarioId: Int, campaignId: Int, isLastScenario: Boolean, dif
                         }
                     }
                     showUpdateLifeDialog = false
-                    continueAfterLifeUpdate() // Proceed to the next step
+                    continueAfterLifeUpdate(isEditing) // Proceed to the next step
                 },
                 onDismiss = { showUpdateLifeDialog = false } // Cancel the whole process
             )
@@ -300,6 +327,7 @@ fun ScenarioRoute(scenarioId: Int, campaignId: Int, isLastScenario: Boolean, dif
 
         // 2. Question Dialog
         currentQuestion?.let { question ->
+            val isEditing = currentData.scenario.status.toLowerCase() == "completed"
             QuestionDialog(
                 question = question,
                 onAnswer = { answer ->
@@ -318,7 +346,7 @@ fun ScenarioRoute(scenarioId: Int, campaignId: Int, isLastScenario: Boolean, dif
                     currentQuestion = remainingQuestions.firstOrNull()
 
                     if (currentQuestion == null) {
-                        startUpgradeSelection()
+                        startUpgradeSelection(isEditing)
                     }
                 },
                 onDismiss = { currentQuestion = null } // Cancel the whole process
@@ -327,6 +355,7 @@ fun ScenarioRoute(scenarioId: Int, campaignId: Int, isLastScenario: Boolean, dif
 
         if (showUpgradeDialog && currentData.heroes.isNotEmpty()) {
             val currentHeroForUpgrade = currentData.heroes[currentHeroUpgradeIndex]
+            val isEditing = currentData.scenario.status.toLowerCase() == "completed"
             UpgradeSelectionDialog(
                 hero = currentHeroForUpgrade,
                 availableUpgrades = availableUpgrades,
@@ -348,7 +377,7 @@ fun ScenarioRoute(scenarioId: Int, campaignId: Int, isLastScenario: Boolean, dif
                     } else {
                         // All heroes have had their turn
                         showUpgradeDialog = false
-                        completeScenarioFlow()
+                        completeScenarioFlow(isEditing)
                     }
                 },
                 onDismiss = {
@@ -359,7 +388,7 @@ fun ScenarioRoute(scenarioId: Int, campaignId: Int, isLastScenario: Boolean, dif
                     } else {
                         // All heroes have had their turn
                         showUpgradeDialog = false
-                        completeScenarioFlow()
+                        completeScenarioFlow(isEditing)
                     }
                 },
                 onCancel = { showUpgradeDialog = false } // Cancel the whole process
@@ -375,6 +404,8 @@ fun ScenarioScreenContent(
     scenario: InstanceScenario,
     heroes: List<InstanceHero>,
     campaignLog: List<InstanceScenario>,
+    isCompleted: Boolean,
+    isLastScenario: Boolean,
     onCompleteClick: () -> Unit
 ) {
     Box(modifier = modifier.fillMaxSize()) {
@@ -466,25 +497,23 @@ fun ScenarioScreenContent(
         }
 
         // Complete Scenario Button
-        Button(
-            onClick = onCompleteClick,
-            shape = RoundedCornerShape(0.dp),
-            colors = ButtonDefaults.buttonColors(
-                containerColor = Color(0xFFED1D24),
-                contentColor = Color.White
-            ),
-            modifier = Modifier
-                .align(Alignment.BottomCenter)
-                .fillMaxWidth()
-                .padding(vertical = 16.dp)
-        ) {
-            // Change button text based on scenario status
-            val buttonText = if (scenario.status.equals("completed", ignoreCase = true)) {
-                "Edit Answers"
-            } else {
-                "Complete Scenario"
+        if(!isLastScenario || !isCompleted) {
+            Button(
+                onClick = onCompleteClick,
+                shape = RoundedCornerShape(0.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = Color(0xFFED1D24),
+                    contentColor = Color.White
+                ),
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .fillMaxWidth()
+                    .padding(vertical = 16.dp)
+            ) {
+                val buttonText = if (isCompleted) "Edit Answers" else "Complete Scenario"
+                // Change button text based on scenario status
+                Text(buttonText, fontSize = 18.sp)
             }
-            Text(buttonText, fontSize = 18.sp)
         }
     }
 }
@@ -854,7 +883,9 @@ fun ScenarioScreenPreview() {
             scenario = dummyScenario,
             heroes = dummyHeroes,
             campaignLog = dummyCampaignLog,
-            onCompleteClick = {}
+            onCompleteClick = {},
+            isCompleted = false,
+            isLastScenario = false
         )
     }
 }
