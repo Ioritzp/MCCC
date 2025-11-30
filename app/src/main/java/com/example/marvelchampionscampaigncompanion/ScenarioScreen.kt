@@ -570,7 +570,7 @@ fun UpdateHeroLifeDialog(
     AlertDialog(
         onDismissRequest = onDismiss,
         containerColor = Color.White,
-        title = { Text("Update Hero Life (Expert)") },
+        title = { Text("Update Hero Life (Expert)", color = Color.Black) },
         text = {
             LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 items(heroes) { hero ->
@@ -585,6 +585,15 @@ fun UpdateHeroLifeDialog(
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                             modifier = Modifier.width(80.dp),
                             singleLine = true,
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedTextColor = Color.Black,
+                                unfocusedTextColor = Color.DarkGray,
+                                focusedBorderColor = Color.Black,
+                                unfocusedBorderColor = Color.DarkGray,
+                                cursorColor = Color.Black,
+                                focusedContainerColor = Color.White,
+                                unfocusedContainerColor = Color.White
+                            ),
                             label = { Text("Life",color = Color.Black) }
                         )
                     }
@@ -592,12 +601,26 @@ fun UpdateHeroLifeDialog(
             }
         },
         confirmButton = {
-            Button(onClick = onConfirm) {
+            Button(
+                onClick = onConfirm,
+                shape = RoundedCornerShape(0.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = Color(0xFFED1D24),
+                    contentColor = Color.White
+                ),
+                ) {
                 Text("Confirm")
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) {
+            TextButton(
+                onClick = onDismiss,
+                shape = RoundedCornerShape(0.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = Color(0xFFED1D24),
+                    contentColor = Color.White
+                ),
+                ) {
                 Text("Cancel")
             }
         }

@@ -2,6 +2,7 @@ package Utils
 
 import android.content.Context
 import android.content.SharedPreferences
+import androidx.core.content.edit
 
 class SessionManager(context: Context) {
     private val preferences = context.getSharedPreferences("AppSession", Context.MODE_PRIVATE)
@@ -11,9 +12,9 @@ class SessionManager(context: Context) {
     }
 
     fun saveUserId(userId: Int){
-        val editor = preferences.edit()
-        editor.putInt(USER_ID_KEY, userId)
-        editor.apply()
+        preferences.edit {
+            putInt(USER_ID_KEY, userId)
+        }
     }
 
     fun getUserId():Int?{
@@ -21,9 +22,9 @@ class SessionManager(context: Context) {
     }
 
     fun clearSession(){
-        val editor = preferences.edit()
-        editor.clear()
-        editor.apply()
+        preferences.edit {
+            clear()
+        }
     }
 
 }

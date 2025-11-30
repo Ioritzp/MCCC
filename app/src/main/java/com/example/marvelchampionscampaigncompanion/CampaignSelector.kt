@@ -111,8 +111,8 @@ private fun CampaignSelectorRoute(userId: Int) {
         AlertDialog(
             onDismissRequest = { showUserDeleteDialog = false },
             containerColor = Color.White,
-            title = { Text("Delete User Account?") },
-            text = { Text("This action is permanent and will delete both your user and the associated campaigns. Are you sure?") },
+            title = { Text("Delete User Account?", color = Color.Black) },
+            text = { Text("This action is permanent and will delete both your user and the associated campaigns. Are you sure?", color = Color.Black) },
             confirmButton = {
                 TextButton(
                     onClick = {
