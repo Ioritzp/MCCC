@@ -1496,5 +1496,26 @@ class DataBaseManager(context: Context?): SQLiteAssetHelper(context, DATABASE_NA
         return db.insert(TABLE_INSTANCE_UPGRADES, null, values)
     }
 
+    fun deleteUpgradesFromHeroByScenario(heroId: Int, scenarioId: Int) {
+        val db = this.writableDatabase
+        // We need a JOIN to find the correct upgrades to delete.
+        // We want to delete from instance_upgrades...
+        // ...where the hero ID matches...
+        // ...AND where the preset_upgrade's scenario ID matches the one we are editing.
+        val query = """
+        DELETE FROM $TABLE_INSTANCE_UPGRADES
+        WHERE $COLUMN_INSTANCE_HERO_ID_FK = ? AND $COLUMN_PRESET_UPGRADE_ID_FK IN (
+            SELECT $COLUMN_PRESET_UPGRADE_ID FROM $TABLE_PRESET_UPGRADES
+            WHERE $COLUMN_PRESET_SCENARIO_ID_FK_3 = ?
+        )
+    """.trimIndent()
+
+        val cursor = db.rawQuery(query, arrayOf(heroId.toString(), scenarioId.toString()))
+        // rawQuery for DELETE doesn't move the cursor, but executing it performs the deletion.
+        // We must call moveToFirst() or a similar method to execute it.
+        cursor.moveToFirst()
+        cursor.close()
+        db.close()
+    }
 
 }

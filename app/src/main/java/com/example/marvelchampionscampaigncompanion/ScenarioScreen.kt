@@ -181,6 +181,7 @@ fun ScenarioRoute(scenarioId: Int, campaignId: Int, isLastScenario: Boolean, dif
     }
 
     val currentData = screenDataState
+    val isEditing = currentData?.scenario?.status?.lowercase() == "completed"
     Log.d("CURRENTDATA_DEBUG",currentData.toString())
     if (currentData == null) {
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -226,7 +227,6 @@ fun ScenarioRoute(scenarioId: Int, campaignId: Int, isLastScenario: Boolean, dif
             // 1. Fetch preset questions for this scenario.
             Log.d("DEBUG_QUESTIONS", "FETCHING QUESTIONS FOR SCENARIO")
             val presetQuestions = dbManager.readQuestionsForScenario(currentData.scenario.id)
-            //CREO que con lo anteior se crean y añaden instancequestions a la db y se lia.
             Log.d("DEBUG_QUESTIONS", "question lsit for scenariopreset: ${currentData.scenario.presetScenarioId} " +
                     "$presetQuestions")
 
@@ -243,7 +243,15 @@ fun ScenarioRoute(scenarioId: Int, campaignId: Int, isLastScenario: Boolean, dif
 
         // This is the entry point, called when the main button is clicked.
         fun startCompletionProcess() {
-            if(isLastScenario){
+            val isEditing = currentData.scenario.status.lowercase() == "completed"
+            Log.d("DEBUG_UPGRADES_EDIT", "is editing?: $isEditing")
+            if (isEditing){
+                for(hero in currentData.heroes){
+                    Log.d("DEBUG_UPGRADES_EDIT", "hero: $hero, scenarioID: ${currentData.scenario.id}")
+                    dbManager.deleteUpgradesFromHeroByScenario(hero.id, currentData.scenario.presetScenarioId)
+                }
+            }
+            if(isLastScenario && !isEditing){
                 completeScenarioFlow()
                 return
             }
@@ -257,7 +265,10 @@ fun ScenarioRoute(scenarioId: Int, campaignId: Int, isLastScenario: Boolean, dif
             scenario = currentData.scenario,
             heroes = currentData.heroes,
             campaignLog = currentData.campaignLog,
-            onCompleteClick = {startCompletionProcess() }
+            isCompleted = isEditing,
+            isLastScenario = isLastScenario,
+            onCompleteClick = {startCompletionProcess()
+            }
         )
 
 
@@ -367,6 +378,8 @@ fun ScenarioScreenContent(
     scenario: InstanceScenario,
     heroes: List<InstanceHero>,
     campaignLog: List<InstanceScenario>,
+    isCompleted: Boolean,
+    isLastScenario: Boolean,
     onCompleteClick: () -> Unit
 ) {
     Box(modifier = modifier.fillMaxSize()) {
@@ -458,25 +471,22 @@ fun ScenarioScreenContent(
         }
 
         // Complete Scenario Button
-        Button(
-            onClick = onCompleteClick,
-            shape = RoundedCornerShape(0.dp),
-            colors = ButtonDefaults.buttonColors(
-                containerColor = Color(0xFFED1D24),
-                contentColor = Color.White
-            ),
-            modifier = Modifier
-                .align(Alignment.BottomCenter)
-                .fillMaxWidth()
-                .padding(vertical = 16.dp)
-        ) {
-            // Change button text based on scenario status
-            val buttonText = if (scenario.status.equals("completed", ignoreCase = true)) {
-                "Edit Answers"
-            } else {
-                "Complete Scenario"
+        if(!isLastScenario || !isCompleted) {
+            Button(
+                onClick = onCompleteClick,
+                shape = RoundedCornerShape(0.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = Color(0xFFED1D24),
+                    contentColor = Color.White
+                ),
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .fillMaxWidth()
+                    .padding(vertical = 16.dp)
+            ) {
+                val buttonText = if(isCompleted) "Edit Answers" else "Complete Scenario!"
+                Text(buttonText, fontSize = 18.sp)
             }
-            Text(buttonText, fontSize = 18.sp)
         }
     }
 }
@@ -846,6 +856,8 @@ fun ScenarioScreenPreview() {
             scenario = dummyScenario,
             heroes = dummyHeroes,
             campaignLog = dummyCampaignLog,
+            isCompleted = false,
+            isLastScenario = false,
             onCompleteClick = {}
         )
     }
