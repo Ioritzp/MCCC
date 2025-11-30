@@ -190,10 +190,7 @@ fun ScenarioRoute(scenarioId: Int, campaignId: Int, isLastScenario: Boolean, dif
         fun completeScenarioFlow() {
             dbManager.updateScenarioStatus(currentData.scenario.id, "completed", setEndDate = true)
             val allScenarios = dbManager.readScenariosForCampaign(campaignId)
-            val endDateCheck = allScenarios.find{scenario -> scenario.id == currentData.scenario.id}
-            Log.d("DEBUG_ALL_SCENARIOS", "Actual scenario end date: ${endDateCheck?.endDate}")
             val currentIndex = allScenarios.indexOfFirst { it.id == currentData.scenario.id }
-            Log.d("DEBUG_UPLOAD DATE", "islastscenario check: $isLastScenario}")
             if(!isLastScenario){
                 val nextScenario = allScenarios[currentIndex + 1]
                 dbManager.updateScenarioStatus(nextScenario.id, "current", false)
@@ -233,20 +230,12 @@ fun ScenarioRoute(scenarioId: Int, campaignId: Int, isLastScenario: Boolean, dif
             // 1. Fetch preset questions for this scenario.
             Log.d("DEBUG_QUESTIONS", "FETCHING QUESTIONS FOR SCENARIO")
             val presetQuestions = dbManager.readQuestionsForScenario(currentData.scenario.id)
+            //CREO que con lo anteior se crean y añaden instancequestions a la db y se lia.
             Log.d("DEBUG_QUESTIONS", "question lsit for scenariopreset: ${currentData.scenario.presetScenarioId} " +
                     "$presetQuestions")
-            // 2. Create InstanceMarvelQuestion objects.
-            val instanceQuestions = presetQuestions.map {
-                InstanceMarvelQuestion(
-                    id = 0, // 0 since it's not in the DB yet.
-                    instanceScenarioId = currentData.scenario.id,
-                    presetQuestionId = it.id,
-                    text = it.text,
-                    questionType = it.questionType,
-                    answer = "" // Initially no answer
-                )
-            }
-            questionsToAsk = instanceQuestions
+
+            questionsToAsk = presetQuestions
+            Log.d("DEBUG_QUESTIONS_ORDER", "original questions list: $questionsToAsk")
 
             // 3. If there are questions, show the first one. Otherwise, start upgrade selection.
             if (questionsToAsk.isNotEmpty()) {
@@ -304,6 +293,9 @@ fun ScenarioRoute(scenarioId: Int, campaignId: Int, isLastScenario: Boolean, dif
                 question = question,
                 onAnswer = { answer ->
                     val answeredQuestion = question.copy(answer = answer)
+                    Log.d("DEBUG_QUESTIONS_ORDER", "question: $question")
+                    Log.d("DEBUG_QUESTIONS_ORDER", "answer: $answer")
+                    Log.d("DEBUG_QUESTIONS_ORDER", "answeredQuestion: $answeredQuestion")
                     // If the ID is not 0, it already exists in the DB, so update it.
                     if (answeredQuestion.id != 0) {
                         dbManager.updateQuestion(answeredQuestion)
