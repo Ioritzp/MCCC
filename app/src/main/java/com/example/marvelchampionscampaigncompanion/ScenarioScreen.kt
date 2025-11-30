@@ -245,7 +245,8 @@ fun ScenarioRoute(scenarioId: Int, campaignId: Int, isLastScenario: Boolean, dif
         fun continueAfterLifeUpdate(isEditing: Boolean) {
             // Fetch preset questions for this scenario.
             val presetQuestions = dbManager.readQuestionsForScenario(currentData.scenario.id)
-            val existingAnswers = dbManager.readQuestionsForScenario(currentData.scenario.id)
+            //fetch existing questions and answers
+            val existingAnswers = dbManager.getAnswersForInstanceScenario(currentData.scenario.id)
             val instanceQuestions = presetQuestions.map {presetQuestion ->
                 val existingAnswer = existingAnswers.find { it.presetQuestionId == presetQuestion.id }
                 InstanceMarvelQuestion(

@@ -1513,5 +1513,60 @@ class DataBaseManager(context: Context?): SQLiteAssetHelper(context, DATABASE_NA
         db.close()
     }
 
+// In DataBaseManager.kt
+
+    @SuppressLint("Range")
+    fun getAnswersForInstanceScenario(instanceScenarioId: Int): List<InstanceMarvelQuestion> {
+        val questions = mutableListOf<InstanceMarvelQuestion>()
+        val db = this.readableDatabase
+        var cursor: Cursor? = null
+
+        val query = """
+        SELECT
+            iq.$COLUMN_INSTANCE_QUESTION_ID,
+            iq.$COLUMN_INSTANCE_SCENARIO_ID_FK,
+            iq.$COLUMN_PRESET_QUESTION_ID_FK,
+            iq.$COLUMN_INSTANCE_QUESTION_ANSWER,
+            pq.$COLUMN_PRESET_QUESTION_TEXT,
+            pq.$COLUMN_PRESET_QUESTION_TYPE
+        FROM
+            $TABLE_INSTANCE_QUESTIONS iq
+        JOIN
+            $TABLE_PRESET_QUESTIONS pq ON iq.$COLUMN_PRESET_QUESTION_ID_FK = pq.$COLUMN_PRESET_QUESTION_ID
+        WHERE
+            iq.$COLUMN_INSTANCE_SCENARIO_ID_FK = ?
+    """
+
+        try {
+            cursor = db.rawQuery(query, arrayOf(instanceScenarioId.toString()))
+
+            if (cursor.moveToFirst()) {
+                do {
+                    val typeStringFromDB = cursor.getString(cursor.getColumnIndex(COLUMN_PRESET_QUESTION_TYPE))
+                    val questionTypeEnum = QuestionType.fromString(typeStringFromDB)
+                    val question = InstanceMarvelQuestion(
+                        id = cursor.getInt(cursor.getColumnIndex(COLUMN_INSTANCE_QUESTION_ID)),
+                        instanceScenarioId = cursor.getInt(cursor.getColumnIndex(COLUMN_INSTANCE_SCENARIO_ID_FK)),
+                        presetQuestionId = cursor.getInt(cursor.getColumnIndex(COLUMN_PRESET_QUESTION_ID_FK)),
+                        answer = cursor.getString(cursor.getColumnIndex(COLUMN_INSTANCE_QUESTION_ANSWER)),
+                        // These now come from the preset_questions table (aliased as 'pq')
+                        text = cursor.getString(cursor.getColumnIndex(COLUMN_PRESET_QUESTION_TEXT)),
+                        questionType = questionTypeEnum
+                    )
+                    questions.add(question)
+                } while (cursor.moveToNext())
+            }
+        } catch (e: Exception) {
+            Log.e("DB_ERROR", "Failed to get answers for instance scenario: $instanceScenarioId", e)
+            e.printStackTrace()
+        } finally {
+            cursor?.close()
+            // It's good practice to not close the DB here if other operations might be chained.
+            // But if this is a standalone function, db.close() is fine.
+        }
+        return questions
+    }
+
+
 
 }
