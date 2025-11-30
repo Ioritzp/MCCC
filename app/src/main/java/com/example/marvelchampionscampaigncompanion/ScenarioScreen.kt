@@ -208,10 +208,6 @@ fun ScenarioRoute(scenarioId: Int, campaignId: Int, isLastScenario: Boolean, dif
 
         // Called after questions are answered (or if there are none).
         fun startUpgradeSelection() {
-            if(isLastScenario){
-                completeScenarioFlow()
-                return
-            }
             val presetCampaignId = dbManager.getPresetCampaignIdByInstanceId(campaignId)
             availableUpgrades =
                 dbManager.getAvailableUpgrades(campaignId, presetCampaignId, currentData.scenario.presetScenarioId)
@@ -247,6 +243,10 @@ fun ScenarioRoute(scenarioId: Int, campaignId: Int, isLastScenario: Boolean, dif
 
         // This is the entry point, called when the main button is clicked.
         fun startCompletionProcess() {
+            if(isLastScenario){
+                completeScenarioFlow()
+                return
+            }
             if (difficulty == "Expert") {
                 showUpdateLifeDialog = true
             } else {
