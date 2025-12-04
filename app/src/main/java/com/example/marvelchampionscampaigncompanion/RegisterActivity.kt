@@ -232,7 +232,7 @@ fun RegisterScreen(modifier: Modifier = Modifier) {
                             val description = if (passwordVisible) "Hide password" else "Show password"
 
                             IconButton(onClick = { passwordVisible = !passwordVisible }) {
-                                Icon(imageVector = eyeImage, description)
+                                Icon(imageVector = eyeImage, description, tint = Color.Black)
                             }
                         }
                     )
@@ -278,7 +278,7 @@ fun RegisterScreen(modifier: Modifier = Modifier) {
                             val description = if (repeatPasswordVisible) "Hide password" else "Show password"
 
                             IconButton(onClick = { repeatPasswordVisible = !repeatPasswordVisible }) {
-                                Icon(imageVector = eyeImage, description)
+                                Icon(imageVector = eyeImage, description, tint = Color.Black)
                             }
                         }
                     )

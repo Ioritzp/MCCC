@@ -246,11 +246,29 @@ fun ScenarioRoute(scenarioId: Int, campaignId: Int, isLastScenario: Boolean, dif
             val isEditing = currentData.scenario.status.lowercase() == "completed"
             Log.d("DEBUG_UPGRADES_EDIT", "is editing?: $isEditing")
             if (isEditing){
-                for(hero in currentData.heroes){
-                    Log.d("DEBUG_UPGRADES_EDIT", "hero: $hero, scenarioID: ${currentData.scenario.id}")
-                    dbManager.deleteUpgradesFromHeroByScenario(hero.id, currentData.scenario.presetScenarioId)
+                if(currentData.scenario.presetScenarioId >= 6 && currentData.scenario.presetScenarioId <= 10){
+                    Log.d("DEBUG_CAMPAIGN_2", "Correctly selected scenario: ${currentData.scenario.presetScenarioId}")
+                    for (hero in currentData.heroes) {
+                        Log.d(
+                            "DEBUG_UPGRADES_EDIT",
+                            "hero: $hero, scenarioID: ${currentData.scenario.id}"
+                        )
+                        dbManager.deleteHeroUpgrades(hero.id)
+                    }
+                }else {
+                    for (hero in currentData.heroes) {
+                        Log.d(
+                            "DEBUG_UPGRADES_EDIT",
+                            "hero: $hero, scenarioID: ${currentData.scenario.id}"
+                        )
+                        dbManager.deleteUpgradesFromHeroByScenario(
+                            hero.id,
+                            currentData.scenario.presetScenarioId
+                        )
+                    }
                 }
             }
+
             if(isLastScenario && !isEditing){
                 completeScenarioFlow()
                 return

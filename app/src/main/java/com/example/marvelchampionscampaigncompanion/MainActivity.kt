@@ -147,7 +147,7 @@ fun LoginMenuCenteredInputScreen(modifier: Modifier = Modifier) {
                     val description = if (passwordVisible) "Hide password" else "Show password"
 
                     IconButton(onClick = { passwordVisible = !passwordVisible }) {
-                        Icon(imageVector = eyeImage, description)
+                        Icon(imageVector = eyeImage, description, tint = Color.Black)
                     }
                 }
             )

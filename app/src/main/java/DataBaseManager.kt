@@ -1498,10 +1498,7 @@ class DataBaseManager(context: Context?): SQLiteAssetHelper(context, DATABASE_NA
 
     fun deleteUpgradesFromHeroByScenario(heroId: Int, scenarioId: Int) {
         val db = this.writableDatabase
-        // We need a JOIN to find the correct upgrades to delete.
-        // We want to delete from instance_upgrades...
-        // ...where the hero ID matches...
-        // ...AND where the preset_upgrade's scenario ID matches the one we are editing.
+
         val query = """
         DELETE FROM $TABLE_INSTANCE_UPGRADES
         WHERE $COLUMN_INSTANCE_HERO_ID_FK = ? AND $COLUMN_PRESET_UPGRADE_ID_FK IN (
@@ -1516,6 +1513,21 @@ class DataBaseManager(context: Context?): SQLiteAssetHelper(context, DATABASE_NA
         cursor.moveToFirst()
         cursor.close()
         db.close()
+    }
+
+    fun deleteHeroUpgrades(heroId: Int,){
+        val db = this.writableDatabase
+
+        try {
+            val whereClause = "$COLUMN_INSTANCE_HERO_ID_FK = ?"
+            val whereArgs = arrayOf(heroId.toString())
+            db.delete(TABLE_INSTANCE_UPGRADES, whereClause, whereArgs)
+        } catch(e: Exception){
+            Log.e("DB_ERROR", "failure deleting upgrades for hero: $heroId")
+            e.printStackTrace()
+        } finally {
+            db.close()
+        }
     }
 
 }

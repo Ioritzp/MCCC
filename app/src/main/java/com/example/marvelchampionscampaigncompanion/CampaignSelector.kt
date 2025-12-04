@@ -136,8 +136,8 @@ private fun CampaignSelectorRoute(userId: Int) {
         AlertDialog(
             onDismissRequest = {showDeleteConfirmDialog = false},
             containerColor = Color.White,
-            title = {Text("Confirm campaign deletion")},
-            text = {Text("Are you sure you want to permanently delete the campaigns?")},
+            title = {Text("Confirm campaign deletion", color = Color.Black)},
+            text = {Text("Are you sure you want to permanently delete the campaigns?", color = Color.Black)},
             confirmButton = {
                 TextButton(
                     onClick = {
@@ -148,11 +148,12 @@ private fun CampaignSelectorRoute(userId: Int) {
                         isDeleteModeActive = false
                         campaignsToDelete = emptySet()
                         refreshTrigger++
-                        }
-                ) {Text("Delete") }
+                        },
+                    colors = ButtonDefaults.textButtonColors(Color.Black)
+                ) {Text("Delete", color = Color.Black) }
             },
             dismissButton = {
-                TextButton(onClick = { showDeleteConfirmDialog = false }) { Text("Cancel") }
+                TextButton(onClick = { showDeleteConfirmDialog = false }, colors = ButtonDefaults.textButtonColors(Color.Black)) { Text("Cancel", color = Color.Black) }
             }
         )
     }
