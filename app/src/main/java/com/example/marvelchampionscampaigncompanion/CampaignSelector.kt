@@ -149,11 +149,11 @@ private fun CampaignSelectorRoute(userId: Int) {
                         campaignsToDelete = emptySet()
                         refreshTrigger++
                         },
-                    colors = ButtonDefaults.textButtonColors(Color.Black)
-                ) {Text("Delete", color = Color.Black) }
+                    colors = ButtonDefaults.textButtonColors(Color(0xFFED1D24))
+                ) {Text("Delete", color = Color.White) }
             },
             dismissButton = {
-                TextButton(onClick = { showDeleteConfirmDialog = false }, colors = ButtonDefaults.textButtonColors(Color.Black)) { Text("Cancel", color = Color.Black) }
+                TextButton(onClick = { showDeleteConfirmDialog = false }, colors = ButtonDefaults.textButtonColors(Color(0xFFED1D24))) { Text("Cancel", color = Color.White) }
             }
         )
     }
@@ -405,11 +405,11 @@ private fun CampaignSelectorScreen(
                                         context.startActivity(intent)
                                     }
                                 },
-                                // NEW: Long press gesture to enter delete mode
+
                                 onLongClick = {
                                     if (!isDeleteModeActive) {
                                         onToggleDeleteMode() // Enter delete mode
-                                        onCampaignSelectedForDelete(campaign.id) // And select the long-pressed item
+                                        onCampaignSelectedForDelete(campaign.id)
                                     }
                                 }
                             )
