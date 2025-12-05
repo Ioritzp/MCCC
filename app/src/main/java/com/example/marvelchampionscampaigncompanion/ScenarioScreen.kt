@@ -149,6 +149,10 @@ fun ScenarioRoute(scenarioId: Int, campaignId: Int, isLastScenario: Boolean, dif
     var showUpdateLifeDialog by remember { mutableStateOf(false) }
     var updatedLifeTotals by remember { mutableStateOf<Map<Int, String>>(emptyMap()) }
 
+    var showUpdateCreditsDialog by remember { mutableStateOf(false) } //this will only work for campaign2
+    var updatedCreditsTotals by remember { mutableStateOf<Map<Int, String>>(emptyMap()) }
+
+
 
     var questionsToAsk by remember { mutableStateOf<List<InstanceMarvelQuestion>>(emptyList()) }
     var currentQuestion by remember { mutableStateOf<InstanceMarvelQuestion?>(null) }
@@ -224,22 +228,18 @@ fun ScenarioRoute(scenarioId: Int, campaignId: Int, isLastScenario: Boolean, dif
 
         // Called after the life update dialog is confirmed.
         fun continueAfterLifeUpdate() {
-            // 1. Fetch preset questions for this scenario.
-            Log.d("DEBUG_QUESTIONS", "FETCHING QUESTIONS FOR SCENARIO")
             val presetQuestions = dbManager.readQuestionsForScenario(currentData.scenario.id)
-            Log.d("DEBUG_QUESTIONS", "question lsit for scenariopreset: ${currentData.scenario.presetScenarioId} " +
-                    "$presetQuestions")
 
             questionsToAsk = presetQuestions
-            Log.d("DEBUG_QUESTIONS_ORDER", "original questions list: $questionsToAsk")
 
-            // 3. If there are questions, show the first one. Otherwise, start upgrade selection.
             if (questionsToAsk.isNotEmpty()) {
                 currentQuestion = questionsToAsk.first()
             } else {
                 startUpgradeSelection()
             }
         }
+
+
 
         // This is the entry point, called when the main button is clicked.
         fun startCompletionProcess() {
@@ -275,6 +275,8 @@ fun ScenarioRoute(scenarioId: Int, campaignId: Int, isLastScenario: Boolean, dif
             }
             if (difficulty == "Expert") {
                 showUpdateLifeDialog = true
+            } else if (currentData.scenario.presetScenarioId >= 6 && currentData.scenario.presetScenarioId <= 10){
+                showUpdateCreditsDialog = true
             } else {
                 continueAfterLifeUpdate() // Skip the life update step
             }
@@ -310,9 +312,36 @@ fun ScenarioRoute(scenarioId: Int, campaignId: Int, isLastScenario: Boolean, dif
                         }
                     }
                     showUpdateLifeDialog = false
-                    continueAfterLifeUpdate() // Proceed to the next step
+                    if(currentData.scenario.presetScenarioId >= 6 && currentData.scenario.presetScenarioId <= 10){
+                        showUpdateCreditsDialog = true
+                    } else {
+                        continueAfterLifeUpdate() // Proceed to the next step
+                    }
                 },
                 onDismiss = { showUpdateLifeDialog = false } // Cancel the whole process
+            )
+        }
+
+        if (showUpdateCreditsDialog) {
+            UpdateHeroCreditsDialog(
+                heroes = currentData.heroes,
+                creditsTotal = updatedCreditsTotals,
+                onCreditsChange = { heroId, newCredits ->
+                    if (newCredits.all { it.isDigit() }) {
+                        updatedCreditsTotals = updatedCreditsTotals + (heroId to newCredits)
+                    }
+                },
+                onConfirm = {
+                    // Save new credit totals to the database
+                    currentData.heroes.forEach { hero ->
+                        updatedCreditsTotals[hero.id]?.toIntOrNull()?.let { newCredits ->
+                            dbManager.updateHeroCredits(hero.id, newCredits)
+                        }
+                    }
+                    showUpdateCreditsDialog = false
+                    continueAfterLifeUpdate() // Proceed to the next step
+                },
+                onDismiss = { showUpdateCreditsDialog = false } // Cancel the whole process
             )
         }
 
@@ -432,7 +461,7 @@ fun ScenarioScreenContent(
             val heroUpgradesMap = heroes.associate { hero ->
                 hero.id to hero.upgrades
             }
-            HeroInfoGrid(heroes = heroes, heroUpgradesMap = heroUpgradesMap)
+            HeroInfoGrid(heroes = heroes, heroUpgradesMap = heroUpgradesMap, presetScenarioId = scenario.presetScenarioId)
 
             // Separator
             HorizontalDivider(
@@ -509,9 +538,9 @@ fun ScenarioScreenContent(
     }
 }
 
-@SuppressLint("DiscouragedApi")
+@SuppressLint("DiscouragedApi", "LocalContextResourcesRead")
 @Composable
-fun HeroInfoGrid(heroes: List<InstanceHero>, heroUpgradesMap: Map<Int, List<InstanceUpgrade>>) { // MODIFIED
+fun HeroInfoGrid(heroes: List<InstanceHero>, heroUpgradesMap: Map<Int, List<InstanceUpgrade>>, presetScenarioId: Int) {
     val context = LocalContext.current
     val dbManager = remember { DataBaseManager(context) }
     Log.d("HERO UPGRADES CHECK", "Upgrades: $heroUpgradesMap")
@@ -549,6 +578,9 @@ fun HeroInfoGrid(heroes: List<InstanceHero>, heroUpgradesMap: Map<Int, List<Inst
                     Spacer(Modifier.height(8.dp))
                     Text(text = hero.name, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
                     Text(text = "Life: ${hero.currentLife}", style = MaterialTheme.typography.bodyMedium)
+                    if(presetScenarioId >= 6 && presetScenarioId <= 10){
+                        Text(text = "Credits: ${hero.credits}", style = MaterialTheme.typography.bodyMedium)
+                    }
 
                     val upgradesByType = heroUpgrades.groupBy {instanceUpgrade ->
                         val preset = presetUpgradesMap[instanceUpgrade.presetUpgradeId]
@@ -641,6 +673,74 @@ fun UpdateHeroLifeDialog(
                     contentColor = Color.White
                 ),
                 ) {
+                Text("Cancel")
+            }
+        }
+    )
+}
+
+@Composable
+fun UpdateHeroCreditsDialog(
+    heroes: List<InstanceHero>,
+    creditsTotal: Map<Int, String>,
+    onCreditsChange: (heroId: Int, newCredits: String) -> Unit,
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        containerColor = Color.White,
+        title = { Text("Update Hero credits", color = Color.Black) },
+        text = {
+            LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                items(heroes) { hero ->
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text(hero.name, Modifier.weight(1f))
+                        OutlinedTextField(
+                            value = creditsTotal[hero.id] ?: "",
+                            onValueChange = { newCredits -> onCreditsChange(hero.id, newCredits) },
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                            modifier = Modifier.width(80.dp),
+                            singleLine = true,
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedTextColor = Color.Black,
+                                unfocusedTextColor = Color.DarkGray,
+                                focusedBorderColor = Color.Black,
+                                unfocusedBorderColor = Color.DarkGray,
+                                cursorColor = Color.Black,
+                                focusedContainerColor = Color.White,
+                                unfocusedContainerColor = Color.White
+                            ),
+                            label = { Text("Credits",color = Color.Black) }
+                        )
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = onConfirm,
+                shape = RoundedCornerShape(0.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = Color(0xFFED1D24),
+                    contentColor = Color.White
+                ),
+            ) {
+                Text("Confirm")
+            }
+        },
+        dismissButton = {
+            TextButton(
+                onClick = onDismiss,
+                shape = RoundedCornerShape(0.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = Color(0xFFED1D24),
+                    contentColor = Color.White
+                ),
+            ) {
                 Text("Cancel")
             }
         }

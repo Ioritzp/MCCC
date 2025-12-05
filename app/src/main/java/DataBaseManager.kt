@@ -114,7 +114,6 @@ class DataBaseManager(context: Context?): SQLiteAssetHelper(context, DATABASE_NA
 }
 
     //Custom onUpgrade for keeping user data when updating the db (temporary - planning to move to 2 databases after the project)
-    @RequiresApi(Build.VERSION_CODES.JELLY_BEAN)
     override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
         //The override checks if the version has changed before doing anything
         if (newVersion > oldVersion){
@@ -148,7 +147,7 @@ class DataBaseManager(context: Context?): SQLiteAssetHelper(context, DATABASE_NA
 
     //fetch methods for custom onUpgrade
 
-    @RequiresApi(Build.VERSION_CODES.JELLY_BEAN)
+
     @SuppressLint("Range")
     private fun fetchAllUsers(db: SQLiteDatabase): List<ContentValues>{
         val list = mutableListOf<ContentValues>()
@@ -169,7 +168,6 @@ class DataBaseManager(context: Context?): SQLiteAssetHelper(context, DATABASE_NA
         return list
     }
 
-    @RequiresApi(Build.VERSION_CODES.JELLY_BEAN)
     @SuppressLint("Range")
     private fun fetchAllCampaignInstances(db: SQLiteDatabase): List<ContentValues>{
         val list = mutableListOf<ContentValues>()
@@ -191,7 +189,6 @@ class DataBaseManager(context: Context?): SQLiteAssetHelper(context, DATABASE_NA
         return list
     }
 
-    @RequiresApi(Build.VERSION_CODES.JELLY_BEAN)
     @SuppressLint("Range")
     private fun fetchAllHeroInstances(db: SQLiteDatabase): List<ContentValues>{
         val list = mutableListOf<ContentValues>()
@@ -215,7 +212,6 @@ class DataBaseManager(context: Context?): SQLiteAssetHelper(context, DATABASE_NA
         return list
     }
 
-    @RequiresApi(Build.VERSION_CODES.JELLY_BEAN)
     @SuppressLint("Range")
     private fun fetchAllScenarioInstances(db: SQLiteDatabase): List<ContentValues>{
         val list = mutableListOf<ContentValues>()
@@ -237,7 +233,6 @@ class DataBaseManager(context: Context?): SQLiteAssetHelper(context, DATABASE_NA
         return list
     }
 
-    @RequiresApi(Build.VERSION_CODES.JELLY_BEAN)
     @SuppressLint("Range")
     private fun fetchAllQuestionInstances(db: SQLiteDatabase): List<ContentValues>{
         val list = mutableListOf<ContentValues>()
@@ -257,7 +252,6 @@ class DataBaseManager(context: Context?): SQLiteAssetHelper(context, DATABASE_NA
         return list
     }
 
-    @RequiresApi(Build.VERSION_CODES.JELLY_BEAN)
     @SuppressLint("Range")
     private fun fetchAllUpgradesInstances(db: SQLiteDatabase): List<ContentValues>{
         val list = mutableListOf<ContentValues>()
@@ -1047,6 +1041,27 @@ class DataBaseManager(context: Context?): SQLiteAssetHelper(context, DATABASE_NA
 
     }
 
+    fun updateHeroCredits(heroId: Int, newCredits: Int) {
+        val db = this.writableDatabase
+        val values = ContentValues().apply {
+            put(COLUMN_INSTANCE_HERO_CREDITS, newCredits)
+        }
+
+        try {
+            db.update(
+                TABLE_INSTANCE_HEROES,
+                values,
+                "$COLUMN_INSTANCE_HERO_ID = ?",
+                arrayOf(heroId.toString())
+            )
+        } catch (e: Exception) {
+            Log.e("DB_UPDATE_ERROR", "Failed to update credits for heroId: $heroId", e)
+            e.printStackTrace()
+        } finally {
+            db.close()
+        }
+    }
+
     //region instanced scenarios
     @RequiresApi(Build.VERSION_CODES.O)
     @SuppressLint("Range")
@@ -1213,7 +1228,6 @@ class DataBaseManager(context: Context?): SQLiteAssetHelper(context, DATABASE_NA
     @RequiresApi(Build.VERSION_CODES.O)
     fun updateScenarioStatus(scenarioId: Int, newStatus: String, setEndDate: Boolean) {
         val db = this.writableDatabase
-        val endDate = LocalDateTime.now()
         val values = ContentValues().apply {
             put(COLUMN_INSTANCE_SCENARIO_STATUS, newStatus)
             if(setEndDate) {
@@ -1313,7 +1327,7 @@ class DataBaseManager(context: Context?): SQLiteAssetHelper(context, DATABASE_NA
         return assignedUpgrades
     }
 
-    @RequiresApi(Build.VERSION_CODES.JELLY_BEAN)
+
     @SuppressLint("Range")
     fun getAllUsersForVerification(): List<User>{
         val db = this.readableDatabase
@@ -1347,25 +1361,23 @@ class DataBaseManager(context: Context?): SQLiteAssetHelper(context, DATABASE_NA
     @RequiresApi(Build.VERSION_CODES.O)
     fun deleteUser(userId: Int){
         val db = this.writableDatabase
-        db.beginTransaction()
-        try{
-            val campaignIds = readCampaigns(userId).map{it.id}
-            for (id in campaignIds){
-                deleteCampaignAndAllRelatedData(id)
+        db.transaction {
+            try {
+                val campaignIds = readCampaigns(userId).map { it.id }
+                for (id in campaignIds) {
+                    deleteCampaignAndAllRelatedData(id)
+                }
+
+                val deletedusers = delete(
+                    TABLE_USERS,
+                    "$COLUMN_USER_ID = ?",
+                    arrayOf(userId.toString())
+                )
+
+            } catch (err: Exception) {
+                err.printStackTrace()
+            } finally {
             }
-
-            val deletedusers = db.delete(
-                TABLE_USERS,
-                "$COLUMN_USER_ID = ?",
-                arrayOf(userId.toString())
-            )
-
-            db.setTransactionSuccessful()
-
-        } catch (err: Exception){
-            err.printStackTrace()
-        } finally {
-            db.endTransaction()
         }
     }
 
@@ -1376,66 +1388,68 @@ class DataBaseManager(context: Context?): SQLiteAssetHelper(context, DATABASE_NA
         Log.d("DB_DELETE", "Starting deletion process for campaign ID: $instanceCampaignId")
 
         // Use a transaction to ensure all deletions succeed or none do.
-        db.beginTransaction()
-        try {
+        db.transaction {
+            try {
 
-            val scenarioIds = readScenariosForCampaign(instanceCampaignId).map { it.id }
-            Log.d("DB_DELETE", "Found scenarios to delete: $scenarioIds")
+                val scenarioIds = readScenariosForCampaign(instanceCampaignId).map { it.id }
+                Log.d("DB_DELETE", "Found scenarios to delete: $scenarioIds")
 
-            if (scenarioIds.isNotEmpty()) {
+                if (scenarioIds.isNotEmpty()) {
 
-                // We create a string of placeholders (?,?,?) for the query.
-                val questionPlaceholders = scenarioIds.joinToString(separator = ", ") { "?" }
-                val questionsDeleted = db.delete(
-                    TABLE_INSTANCE_QUESTIONS,
-                    "$COLUMN_INSTANCE_SCENARIO_ID_FK IN ($questionPlaceholders)",
-                    scenarioIds.map { it.toString() }.toTypedArray()
+                    // We create a string of placeholders (?,?,?) for the query.
+                    val questionPlaceholders = scenarioIds.joinToString(separator = ", ") { "?" }
+                    val questionsDeleted = delete(
+                        TABLE_INSTANCE_QUESTIONS,
+                        "$COLUMN_INSTANCE_SCENARIO_ID_FK IN ($questionPlaceholders)",
+                        scenarioIds.map { it.toString() }.toTypedArray()
+                    )
+                    Log.d(
+                        "DB_DELETE",
+                        "Deleted $questionsDeleted questions for scenarios: $scenarioIds"
+                    )
+
+
+                    val scenarioPlaceholders = scenarioIds.joinToString(separator = ", ") { "?" }
+                    val scenariosDeleted = delete(
+                        TABLE_INSTANCE_SCENARIOS,
+                        "$COLUMN_INSTANCE_SCENARIO_ID IN ($scenarioPlaceholders)",
+                        scenarioIds.map { it.toString() }.toTypedArray()
+                    )
+                    Log.d("DB_DELETE", "Deleted $scenariosDeleted scenarios.")
+                }
+
+
+                val upgradesDeleted = delete(
+                    TABLE_INSTANCE_UPGRADES,
+                    "$COLUMN_INSTANCE_CAMPAIGN_ID_FK_3 = ?",
+                    arrayOf(instanceCampaignId.toString())
                 )
-                Log.d("DB_DELETE", "Deleted $questionsDeleted questions for scenarios: $scenarioIds")
+                Log.d("DB_DELETE", "Deleted $upgradesDeleted upgrades for campaign.")
 
-
-                val scenarioPlaceholders = scenarioIds.joinToString(separator = ", ") { "?" }
-                val scenariosDeleted = db.delete(
-                    TABLE_INSTANCE_SCENARIOS,
-                    "$COLUMN_INSTANCE_SCENARIO_ID IN ($scenarioPlaceholders)",
-                    scenarioIds.map { it.toString() }.toTypedArray()
+                val heroesDeleted = delete(
+                    TABLE_INSTANCE_HEROES,
+                    "$COLUMN_INSTANCE_CAMPAIGN_ID_FK = ?",
+                    arrayOf(instanceCampaignId.toString())
                 )
-                Log.d("DB_DELETE", "Deleted $scenariosDeleted scenarios.")
+                Log.d("DB_DELETE", "Deleted $heroesDeleted heroes for campaign.")
+
+
+                val campaignsDeleted = delete(
+                    TABLE_INSTANCE_CAMPAIGNS,
+                    "$COLUMN_INSTANCE_CAMPAIGN_ID = ?",
+                    arrayOf(instanceCampaignId.toString())
+                )
+                Log.d("DB_DELETE", "Deleted $campaignsDeleted campaign entry.")
+
+                // If all deletions were successful, mark the transaction as successful.
+                Log.d("DB_DELETE", "Transaction successful for campaign ID: $instanceCampaignId")
+
+            } catch (e: Exception) {
+                Log.e("DB_DELETE", "Error during campaign deletion transaction. Rolling back.", e)
+                e.printStackTrace()
+            } finally {
+                // End the transaction. If setTransactionSuccessful was not called, this will roll back the changes.
             }
-
-
-            val upgradesDeleted = db.delete(
-                TABLE_INSTANCE_UPGRADES,
-                "$COLUMN_INSTANCE_CAMPAIGN_ID_FK_3 = ?",
-                arrayOf(instanceCampaignId.toString())
-            )
-            Log.d("DB_DELETE", "Deleted $upgradesDeleted upgrades for campaign.")
-
-            val heroesDeleted = db.delete(
-                TABLE_INSTANCE_HEROES,
-                "$COLUMN_INSTANCE_CAMPAIGN_ID_FK = ?",
-                arrayOf(instanceCampaignId.toString())
-            )
-            Log.d("DB_DELETE", "Deleted $heroesDeleted heroes for campaign.")
-
-
-            val campaignsDeleted = db.delete(
-                TABLE_INSTANCE_CAMPAIGNS,
-                "$COLUMN_INSTANCE_CAMPAIGN_ID = ?",
-                arrayOf(instanceCampaignId.toString())
-            )
-            Log.d("DB_DELETE", "Deleted $campaignsDeleted campaign entry.")
-
-            // If all deletions were successful, mark the transaction as successful.
-            db.setTransactionSuccessful()
-            Log.d("DB_DELETE", "Transaction successful for campaign ID: $instanceCampaignId")
-
-        } catch (e: Exception) {
-            Log.e("DB_DELETE", "Error during campaign deletion transaction. Rolling back.", e)
-            e.printStackTrace()
-        } finally {
-            // End the transaction. If setTransactionSuccessful was not called, this will roll back the changes.
-            db.endTransaction()
         }
     }
 
@@ -1515,7 +1529,7 @@ class DataBaseManager(context: Context?): SQLiteAssetHelper(context, DATABASE_NA
         db.close()
     }
 
-    fun deleteHeroUpgrades(heroId: Int,){
+    fun deleteHeroUpgrades(heroId: Int){
         val db = this.writableDatabase
 
         try {
