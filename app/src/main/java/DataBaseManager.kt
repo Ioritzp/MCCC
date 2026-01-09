@@ -57,6 +57,7 @@ class DataBaseManager(context: Context?): SQLiteAssetHelper(context, DATABASE_NA
         const val COLUMN_PRESET_UPGRADE_TYPE = "tipo"
         const val COLUMN_PRESET_UPGRADE_IS_DISPOSABLE = "consumible"
         const val COLUMN_PRESET_SCENARIO_ID_FK_3 = "id_preset_escenario_fk"
+        const val COLUMN_PRESET_UPGRADE_COST = "coste"
 
         //users table
         const val TABLE_USERS = "usuarios"
@@ -495,7 +496,8 @@ class DataBaseManager(context: Context?): SQLiteAssetHelper(context, DATABASE_NA
                     val name = cursor.getString(cursor.getColumnIndex(COLUMN_PRESET_UPGRADE_NAME))
                     val type = cursor.getString(cursor.getColumnIndex(COLUMN_PRESET_UPGRADE_TYPE))
                     val isDisposable = cursor.getInt(cursor.getColumnIndex(COLUMN_PRESET_UPGRADE_IS_DISPOSABLE))
-                    val upgrade = Upgrade(id, name, type, isDisposable)
+                    val cost = cursor.getInt(cursor.getColumnIndex(COLUMN_PRESET_UPGRADE_COST))
+                    val upgrade = Upgrade(id, name, type, isDisposable, cost)
                     upgradeList.add(upgrade)
                 } while (cursor.moveToNext())
             }
@@ -1490,7 +1492,8 @@ class DataBaseManager(context: Context?): SQLiteAssetHelper(context, DATABASE_NA
                         id = presetId,
                         name = cursor.getString(cursor.getColumnIndex(COLUMN_PRESET_UPGRADE_NAME)),
                         type = cursor.getString(cursor.getColumnIndex(COLUMN_PRESET_UPGRADE_TYPE)),
-                        isDisposable = cursor.getInt(cursor.getColumnIndex(COLUMN_PRESET_UPGRADE_IS_DISPOSABLE))
+                        isDisposable = cursor.getInt(cursor.getColumnIndex(COLUMN_PRESET_UPGRADE_IS_DISPOSABLE)),
+                        cost = cursor.getInt(cursor.getColumnIndex(COLUMN_PRESET_UPGRADE_COST))
                     )
                 )
             }
@@ -1544,4 +1547,34 @@ class DataBaseManager(context: Context?): SQLiteAssetHelper(context, DATABASE_NA
         }
     }
 
+    @SuppressLint("Range")
+    fun getHeroCredits(heroId: Int): Int{
+        val db = this.readableDatabase
+        var cursor: Cursor? = null
+        var credits = 0
+
+        try {
+            cursor = db.query(
+                TABLE_INSTANCE_HEROES,
+                arrayOf(COLUMN_INSTANCE_HERO_CREDITS),
+                "$COLUMN_INSTANCE_HERO_ID = ?",
+                arrayOf(heroId.toString()),
+                null,
+                null,
+                null
+            )
+
+            if (cursor.moveToFirst()){
+                credits = cursor.getInt(cursor.getColumnIndex(COLUMN_INSTANCE_HERO_CREDITS))
+            }
+
+        } catch(e: Exception){
+            Log.e("DB_ERROR", "failure fetching credits for hero: $heroId")
+            e.printStackTrace()
+        } finally {
+            db.close()
+
+        }
+        return credits
+    }
 }

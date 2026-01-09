@@ -198,7 +198,7 @@ fun NewCampaignCreationScreen(
                 )
 
                 Text(
-                    //TODO: change the typography
+
                     text = "Create Campaign",
                     style = MaterialTheme.typography.headlineMedium,
                     color = Color.White,
@@ -239,6 +239,12 @@ fun CampaignButton(blueprint: CampaignBlueprint, onClick: () -> Unit) {
         "Rise of Red Skull" -> Color(0xFF962626)
         "Galaxy's Most Wanted" -> Color(0xFF211CAD)
         "The Mad Titan's Shadow" -> Color(0xFFC2973C)
+        "Sinister Motives" -> Color(0xFF790D91)
+        "Mutant Genesis" -> Color(0xFFB0A5B0)
+        "NeXt Evolution" -> Color(0xFFD97311)
+        "Age of Apocalypse" -> Color(0xFF449BBD)
+        "Agents of S.H.I.E.L.D." -> Color(0xFF141313)
+
         else -> MaterialTheme.colorScheme.surfaceVariant // Default fallback colors
     }
     Card(
@@ -297,6 +303,11 @@ fun NewCampaignCreationRoute(userId: Int) {
                 "Rise of Red Skull" -> R.drawable.red_skull
                 "Galaxy's Most Wanted" -> R.drawable.most_wanted
                 "The Mad Titan's Shadow" -> R.drawable.mad_titan
+                "Sinister Motives" -> R.drawable.sinister_motives
+                "Mutant Genesis" -> R.drawable.mutant_gen
+                "NeXt Evolution" -> R.drawable.next_evo
+                "Age of Apocalypse" -> R.drawable.age_apo
+                "Agents of S.H.I.E.L.D." -> R.drawable.agents
                 else -> null
             }
             CampaignBlueprint(

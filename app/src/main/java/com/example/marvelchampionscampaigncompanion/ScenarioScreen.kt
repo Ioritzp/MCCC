@@ -376,18 +376,25 @@ fun ScenarioRoute(scenarioId: Int, campaignId: Int, isLastScenario: Boolean, dif
         }
 
         if (showUpgradeDialog && currentData.heroes.isNotEmpty()) {
-            val currentHeroForUpgrade = currentData.heroes[currentHeroUpgradeIndex]
+            var currentHeroForUpgrade = currentData.heroes[currentHeroUpgradeIndex]
+            currentHeroForUpgrade.credits = dbManager.getHeroCredits(currentHeroForUpgrade.id)
             UpgradeSelectionDialog(
                 hero = currentHeroForUpgrade,
                 availableUpgrades = availableUpgrades,
                 onConfirm = { selectedUpgrades ->
+                        var totalCost = 0
                         selectedUpgrades.forEach { selectedUpgrade ->
+                            totalCost += selectedUpgrade.cost ?: 0
                             dbManager.assignUpgradeToHero(
                                 campaignId = campaignId,
                                 presetUpgradeId = selectedUpgrade.id,
                                 heroId = currentHeroForUpgrade.id
                             )
                         }
+                    if(totalCost > 0){
+                        val newCredits = currentHeroForUpgrade.credits - totalCost
+                        dbManager.updateHeroCredits(currentHeroForUpgrade.id, newCredits)
+                    }
                     // Remove selected upgrade from the available list
                     val selectedIds = selectedUpgrades.map { it.id }.toSet()
                     availableUpgrades = availableUpgrades.filter { it.id !in selectedIds }
@@ -852,11 +859,13 @@ fun UpgradeSelectionDialog(
             } else {
                 LazyColumn {
                     items(availableUpgrades) { upgrade ->
+                        val canAfford = upgrade.cost == null || hero.credits >= upgrade.cost
+                        val isChecked = upgrade.id in selectedUpgradeIds
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .clickable {
-                                    selectedUpgradeIds = if(upgrade.id in selectedUpgradeIds)
+                                .clickable(enabled = canAfford) {
+                                    selectedUpgradeIds = if (isChecked)
                                         selectedUpgradeIds - upgrade.id
                                     else
                                         selectedUpgradeIds + upgrade.id
@@ -866,18 +875,26 @@ fun UpgradeSelectionDialog(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Checkbox(
-                                checked = (upgrade.id in selectedUpgradeIds),
-                                colors = CheckboxDefaults.colors(checkedColor = Color.Black, uncheckedColor = Color.Black),
-                                onCheckedChange = { isChecked ->
+                                checked = isChecked,
+                                enabled = canAfford,
+                                colors = CheckboxDefaults.colors(
+                                    checkedColor = Color.Black,
+                                    uncheckedColor = Color.Black,
+                                    disabledCheckedColor = Color.Gray,
+                                    disabledUncheckedColor = Color.Gray
+                                ),
+                                onCheckedChange = { _ -> // The clickable modifier handles the logic
                                     selectedUpgradeIds = if (isChecked) {
-                                        selectedUpgradeIds + upgrade.id
-                                    } else {
                                         selectedUpgradeIds - upgrade.id
+                                    } else {
+                                        selectedUpgradeIds + upgrade.id
                                     }
                                 }
                             )
                             Spacer(Modifier.width(16.dp))
-                            Text(upgrade.name, color = Color.Black)
+                            val textColor = if (canAfford) Color.Black else Color.Gray
+                            val costText = upgrade.cost?.let { " ($it credits)" } ?: ""
+                            Text("${upgrade.name}$costText", color = textColor)
                         }
                     }
                 }
